@@ -13,5 +13,5 @@ or manually download to `/hass/config/custom_components` and rename `home-assist
 light:
   - platform: prismatik
     host: 192.168.42.42
-	port: 3636
+    port: 3636
 ```
