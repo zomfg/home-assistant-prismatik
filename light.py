@@ -56,25 +56,22 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
 class PrismatikLight(Light):
     """Define a light."""
-    # TODO: LED range as light
+
     def __init__(self, hass, host, port, apikey):
         """Intialize."""
-        _LOGGER.error("this bs %s:%s", host, port)
         self._hass = hass
         self._host = host
         self._port = port
+        self._apikey = apikey
         self._color = None
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.settimeout(1)
         self._sock.connect((self._host, self._port))
         # skip header
-        header = self._sock.recv(4096)
+        header = self._sock.recv(512)
         # todo check header
-
-#        self._token = token
-        self._do_someshit("lock")
-        self._set_someshit("mode", "moodlight")
-        self._set_someshit("persistonunlock", "on")
+        if self._apikey:
+            self._do_someshit("apikey", self._apikey)
 
     def _get_someshit(self, someshit):
         cmd = "get" + someshit + "\n"
@@ -92,12 +89,18 @@ class PrismatikLight(Light):
         answer = self._sock.recv(4096).decode("ascii").strip()
         return True
 
-    def _do_someshit(self, someshit):
-        cmd = someshit + "\n"
+    def _do_someshit(self, someshit, value=None):
+        cmd = someshit + (":" + str(value) if value else "") + "\n"
         _LOGGER.error("DOING SHIT %s", cmd)
         self._sock.sendall(cmd.encode("ascii"))
         answer = self._sock.recv(4096).decode("ascii")
         return True
+
+    def _set_rgb_color(self, rgb):
+        leds = self.leds
+        rgb_color = ','.join(map(lambda c: str(c), rgb))
+        pixels = ';'.join(list(map(lambda led: str(led) + "-" + rgb_color, [i for i in range(1, leds + 1)])))
+        self._set_someshit("color", pixels)
 
     @property
     def name(self):
@@ -145,59 +148,25 @@ class PrismatikLight(Light):
         """Current profile."""
         return self._get_someshit("profile")
 
-    # @property
-    # def capability_attributes(self):
-    #     """Return capability attributes."""
-    #     data = {}
-        # supported_features = self.supported_features
-
-        # if supported_features & SUPPORT_COLOR_TEMP:
-        #     data[ATTR_MIN_MIREDS] = self.min_mireds
-        #     data[ATTR_MAX_MIREDS] = self.max_mireds
-
-        # if supported_features & SUPPORT_EFFECT:
-        #     data[ATTR_EFFECT_LIST] = self.effect_list
-
-        # return data
-
-    # @property
-    # def device_info(self):
-    #     """Return a device description for device registry."""
-    #     return {
-    #         "identifiers": {(DOMAIN, self.unique_id)},
-    #         "manufacturer": "1337h4x0r",
-    #         "model": "prismatik",
-    #         "name": self.name,
-    #     }
-
-    def _set_rgb_color(self, rgb):
-        leds = self.leds
-        rgb_color = ','.join(map(lambda c: str(c), rgb))
-        pixels = ';'.join(list(map(lambda led: str(led) + "-" + rgb_color, [i for i in range(1, leds + 1)])))
-        _LOGGER.error("this bs OVER HERE %s", pixels)
-        self._set_someshit("color", pixels)
-
     def turn_on(self, **kwargs):
         """Turn the light on."""
+        if self._apikey:
+            self._do_someshit("apikey", self._apikey)
         self._do_someshit("lock")
         self._set_someshit("mode", "moodlight")
         self._set_someshit("persistonunlock", "on")
         self._set_someshit("status", "on")
         _LOGGER.error("this bs OVER HERE %s", *kwargs)
         if ATTR_HS_COLOR in kwargs:
+            # self._color = *kwargs[ATTR_HS_COLOR]
             rgb = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
             self._set_rgb_color(rgb)
         elif ATTR_BRIGHTNESS in kwargs:
             self._set_someshit("brightness", int(kwargs[ATTR_BRIGHTNESS] / 2.55))
         elif ATTR_EFFECT in kwargs:
             self._set_someshit("profile", kwargs[ATTR_EFFECT])
-        # else:
-            #self._do_someshit("unlock")
 
     def turn_off(self, **kwargs):
         """Turn the light off."""
         self._set_someshit("status", "off")
         self._do_someshit("unlock")
-
-    def update(self):
-        """Update teh light."""

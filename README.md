@@ -14,4 +14,5 @@ light:
   - platform: prismatik
     host: 192.168.42.42
     port: 3636
+    api_key: OPTIONAL_KEY
 ```
