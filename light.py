@@ -3,27 +3,22 @@ import logging
 import re
 import socket
 from typing import Optional
+
+import homeassistant.helpers.config_validation as cv
+import homeassistant.util.color as color_util
 import voluptuous as vol
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
-    # ATTR_COLOR_TEMP,
     ATTR_EFFECT,
     ATTR_HS_COLOR,
-    # ATTR_TRANSITION,
-    # EFFECT_COLORLOOP,
-    # EFFECT_RANDOM,
     PLATFORM_SCHEMA,
     SUPPORT_BRIGHTNESS,
     SUPPORT_COLOR,
-    # SUPPORT_COLOR_TEMP,
     SUPPORT_EFFECT,
-    # SUPPORT_FLASH,
-    # SUPPORT_TRANSITION,
     Light,
 )
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_API_KEY
-import homeassistant.helpers.config_validation as cv
-import homeassistant.util.color as color_util
+from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_PORT
+
 from .const import DEFAULT_PORT
 
 # from .const import DOMAIN
