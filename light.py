@@ -64,43 +64,70 @@ class PrismatikLight(Light):
         self._port = port
         self._apikey = apikey
         self._color = None
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._sock.settimeout(1)
-        self._sock.connect((self._host, self._port))
-        # skip header
-        header = self._sock.recv(512)
-        # todo check header
-        if self._apikey:
-            self._do_someshit("apikey", self._apikey)
+        self._connected = False
+        # self._connect()
 
-    def _get_someshit(self, someshit):
-        cmd = "get" + someshit + "\n"
-        _LOGGER.error("GETTING SHIT %s", cmd)
-        self._sock.sendall(cmd.encode())
-        answer = self._sock.recv(4096).decode("ascii").strip()
-        _LOGGER.error("GOT SHIT %s", answer)
-        matches = re.compile(someshit+":(\S+)").search(answer)
-        return matches.group(1)
+    def _connect(self):
+        try:
+            self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self._sock.settimeout(1)
+            self._sock.connect((self._host, self._port))
+            # skip header
+            header = self._sock.recv(512)
+            # todo check header
+            self._connected = True
+            if self._apikey:
+                self._do_cmd("apikey", self._apikey)
+        except OSError:
+            self._connected = False
+            if self._sock:
+                self._sock.close()
+        return self._connected
 
-    def _set_someshit(self, someshit, value):
-        cmd = "set" + someshit + ":" + str(value) + "\n"
-        _LOGGER.error("SETTING SHIT %s", cmd)
-        self._sock.sendall(cmd.encode("ascii"))
-        answer = self._sock.recv(4096).decode("ascii").strip()
+    def _send(self, buffer):
+        if self._connected is False:
+            self._connect()
+        if self._connected is False:
+            return None
+
+        _LOGGER.error("SENDING %s", buffer)
+        try:
+            self._sock.sendall(buffer.encode("ascii"))
+            answer = self._sock.recv(4096).decode("ascii").strip()
+        except OSError:
+            _LOGGER.error("FAILED %s", buffer)
+            self._sock.close()
+            self._connected = False
+            return None
+        _LOGGER.error("RECEIVED %s", answer)
+        return answer
+
+    def _get_cmd(self, cmd):
+        answer = self._send("get" + cmd + "\n")
+        if answer is None:
+            return None
+        matches = re.compile(cmd + ":(\S+)").search(answer)
+        if matches:
+            return matches.group(1)
+        return None
+
+    def _set_cmd(self, cmd, value):
+        answer = self._send("set" + cmd + ":" + str(value) + "\n")
+        if answer is None:
+            return False
         return True
 
-    def _do_someshit(self, someshit, value=None):
-        cmd = someshit + (":" + str(value) if value else "") + "\n"
-        _LOGGER.error("DOING SHIT %s", cmd)
-        self._sock.sendall(cmd.encode("ascii"))
-        answer = self._sock.recv(4096).decode("ascii")
+    def _do_cmd(self, cmd, value=None):
+        answer = self._send(cmd + (":" + str(value) if value else "") + "\n")
+        if answer is None:
+            return False
         return True
 
     def _set_rgb_color(self, rgb):
         leds = self.leds
         rgb_color = ','.join(map(lambda c: str(c), rgb))
         pixels = ';'.join(list(map(lambda led: str(led) + "-" + rgb_color, [i for i in range(1, leds + 1)])))
-        self._set_someshit("color", pixels)
+        self._set_cmd("color", pixels)
 
     @property
     def name(self):
@@ -115,17 +142,26 @@ class PrismatikLight(Light):
     @property
     def is_on(self):
         """Is this thing on."""
-        return (self._get_someshit("status") == "on")
+        status = self._get_cmd("status")
+        if status is not None:
+            return (self._get_cmd("status") == "on")
+        return None
 
     @property
     def leds(self):
         """Return leds of the light."""
-        return int(self._get_someshit("countleds"))
+        countleds = self._get_cmd("countleds")
+        if countleds is not None:
+            return int(countleds)
+        return None
 
     @property
     def brightness(self):
         """Return brightness of the light."""
-        return int(self._get_someshit("brightness")) * 2.55
+        brightness = self._get_cmd("brightness")
+        if brightness is not None:
+            return int(brightness) * 2.55
+        return None
 
     @property
     def hs_color(self):
@@ -135,38 +171,47 @@ class PrismatikLight(Light):
     @property
     def supported_features(self):
         """Flag supported features."""
-        return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_EFFECT
+        if self._connected:
+            return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_EFFECT
+        return 0
 
     @property
     def effect_list(self):
         """Profiles."""
-        profiles = self._get_someshit("profiles")
-        return list(filter(None, profiles.split(';')))
+        profiles = self._get_cmd("profiles")
+        if profiles:
+            return list(filter(None, profiles.split(';')))
+        return None
 
     @property
     def effect(self):
         """Current profile."""
-        return self._get_someshit("profile")
+        profile = self._get_cmd("profile")
+        if profile:
+            return profile
+        return None
 
     def turn_on(self, **kwargs):
         """Turn the light on."""
-        if self._apikey:
-            self._do_someshit("apikey", self._apikey)
-        self._do_someshit("lock")
-        self._set_someshit("mode", "moodlight")
-        self._set_someshit("persistonunlock", "on")
-        self._set_someshit("status", "on")
+        if self._connected is False:
+            if self._apikey is not None and self._do_cmd("apikey", self._apikey) is False:
+                return
+        if self._do_cmd("lock") is False:
+            return
+        self._set_cmd("mode", "moodlight")
+        self._set_cmd("persistonunlock", "on")
+        self._set_cmd("status", "on")
         _LOGGER.error("this bs OVER HERE %s", *kwargs)
         if ATTR_HS_COLOR in kwargs:
             # self._color = *kwargs[ATTR_HS_COLOR]
             rgb = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
             self._set_rgb_color(rgb)
         elif ATTR_BRIGHTNESS in kwargs:
-            self._set_someshit("brightness", int(kwargs[ATTR_BRIGHTNESS] / 2.55))
+            self._set_cmd("brightness", int(kwargs[ATTR_BRIGHTNESS] / 2.55))
         elif ATTR_EFFECT in kwargs:
-            self._set_someshit("profile", kwargs[ATTR_EFFECT])
+            self._set_cmd("profile", kwargs[ATTR_EFFECT])
 
     def turn_off(self, **kwargs):
         """Turn the light off."""
-        self._set_someshit("status", "off")
-        self._do_someshit("unlock")
+        self._set_cmd("status", "off")
+        self._do_cmd("unlock")
