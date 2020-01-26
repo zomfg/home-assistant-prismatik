@@ -5,26 +5,26 @@ import socket
 import voluptuous as vol
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
-#    ATTR_COLOR_TEMP,
-   ATTR_EFFECT,
-   ATTR_HS_COLOR,
-#    ATTR_TRANSITION,
-#    EFFECT_COLORLOOP,
-#    EFFECT_RANDOM,
+    #ATTR_COLOR_TEMP,
+    ATTR_EFFECT,
+    ATTR_HS_COLOR,
+    #ATTR_TRANSITION,
+    #EFFECT_COLORLOOP,
+    #EFFECT_RANDOM,
     PLATFORM_SCHEMA,
     SUPPORT_BRIGHTNESS,
     SUPPORT_COLOR,
-#    SUPPORT_COLOR_TEMP,
-   SUPPORT_EFFECT,
-#    SUPPORT_FLASH,
-#    SUPPORT_TRANSITION,
+    #SUPPORT_COLOR_TEMP,
+    SUPPORT_EFFECT,
+    #SUPPORT_FLASH,
+    #SUPPORT_TRANSITION,
     Light,
 )
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_API_KEY
 import homeassistant.helpers.config_validation as cv
-from .const import DEFAULT_PORT
-from .const import DOMAIN
 import homeassistant.util.color as color_util
+from .const import DEFAULT_PORT
+#from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,6 +36,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the Awesome Light platform."""
+    #pylint: disable=unused-argument
     # Assign configuration variables.
     # The configuration check takes care they are present.
     host = config[CONF_HOST]
@@ -63,31 +64,26 @@ class PrismatikLight(Light):
         self._host = host
         self._port = port
         self._apikey = apikey
-        self._color = None
-        self._connected = False
-        # self._connect()
+        self._sock = None
 
     def _connect(self):
         try:
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._sock.settimeout(1)
             self._sock.connect((self._host, self._port))
-            # skip header
-            header = self._sock.recv(512)
-            # todo check header
-            self._connected = True
-            if self._apikey:
-                self._do_cmd("apikey", self._apikey)
+            # check header
+            header = self._sock.recv(512).decode("ascii").strip()
+            if re.match(r'^Lightpack', header) is None:
+                _LOGGER.error("Bad API header")
+                raise OSError()
         except OSError:
-            self._connected = False
             if self._sock:
                 self._sock.close()
-        return self._connected
+            self._sock = None
+        return self._sock is not None
 
     def _send(self, buffer):
-        if self._connected is False:
-            self._connect()
-        if self._connected is False:
+        if self._sock is None and self._connect() is False:
             return None
 
         _LOGGER.error("SENDING %s", buffer)
@@ -97,36 +93,41 @@ class PrismatikLight(Light):
         except OSError:
             _LOGGER.error("FAILED %s", buffer)
             self._sock.close()
-            self._connected = False
+            self._sock = None
             return None
         _LOGGER.error("RECEIVED %s", answer)
+        if answer == "not locked":
+            if self._do_cmd("lock"):
+                return self._send(buffer)
+            _LOGGER.error("Could not lock Prismatik")
+            answer = None
+        if answer == "authorization required":
+            if self._apikey and self._do_cmd("apikey", self._apikey):
+                return self._send(buffer)
+            _LOGGER.error("Could not lock Prismatik")
+            answer = None
         return answer
 
     def _get_cmd(self, cmd):
         answer = self._send("get" + cmd + "\n")
-        if answer is None:
-            return None
-        matches = re.compile(cmd + ":(\S+)").search(answer)
-        if matches:
-            return matches.group(1)
+        if answer is not None:
+            matches = re.compile(cmd + r":(\S+)").match(answer)
+            if matches:
+                return matches.group(1)
         return None
 
     def _set_cmd(self, cmd, value):
         answer = self._send("set" + cmd + ":" + str(value) + "\n")
-        if answer is None:
-            return False
-        return True
+        return answer == "ok"
 
     def _do_cmd(self, cmd, value=None):
         answer = self._send(cmd + (":" + str(value) if value else "") + "\n")
-        if answer is None:
-            return False
-        return True
+        return re.compile(r"^(ok|" + cmd + r":success)$").match(answer) is not None
 
     def _set_rgb_color(self, rgb):
         leds = self.leds
-        rgb_color = ','.join(map(lambda c: str(c), rgb))
-        pixels = ';'.join(list(map(lambda led: str(led) + "-" + rgb_color, [i for i in range(1, leds + 1)])))
+        rgb_color = ','.join(map(str, rgb))
+        pixels = ';'.join(list([str(i) + "-" + rgb_color for i in range(1, leds + 1)]))
         self._set_cmd("color", pixels)
 
     @property
@@ -143,67 +144,43 @@ class PrismatikLight(Light):
     def is_on(self):
         """Is this thing on."""
         status = self._get_cmd("status")
-        if status is not None:
-            return (self._get_cmd("status") == "on")
-        return None
+        return status == "on" if status else None
 
     @property
     def leds(self):
         """Return leds of the light."""
         countleds = self._get_cmd("countleds")
-        if countleds is not None:
-            return int(countleds)
-        return None
+        return int(countleds) if countleds else 0
 
     @property
     def brightness(self):
         """Return brightness of the light."""
         brightness = self._get_cmd("brightness")
-        if brightness is not None:
-            return int(brightness) * 2.55
-        return None
-
-    @property
-    def hs_color(self):
-        """Return the color of the light."""
-        return self._color
+        return int(brightness) * 2.55 if brightness else None
 
     @property
     def supported_features(self):
         """Flag supported features."""
-        if self._connected:
-            return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_EFFECT
-        return 0
+        return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_EFFECT
 
     @property
     def effect_list(self):
         """Profiles."""
         profiles = self._get_cmd("profiles")
-        if profiles:
-            return list(filter(None, profiles.split(';')))
-        return None
+        return list(filter(None, profiles.split(';'))) if profiles else None
 
     @property
     def effect(self):
         """Current profile."""
-        profile = self._get_cmd("profile")
-        if profile:
-            return profile
-        return None
+        return self._get_cmd("profile")
 
     def turn_on(self, **kwargs):
         """Turn the light on."""
-        if self._connected is False:
-            if self._apikey is not None and self._do_cmd("apikey", self._apikey) is False:
-                return
-        if self._do_cmd("lock") is False:
-            return
         self._set_cmd("mode", "moodlight")
         self._set_cmd("persistonunlock", "on")
         self._set_cmd("status", "on")
-        _LOGGER.error("this bs OVER HERE %s", *kwargs)
+        _LOGGER.error("TURNING ON WITH %s", *kwargs)
         if ATTR_HS_COLOR in kwargs:
-            # self._color = *kwargs[ATTR_HS_COLOR]
             rgb = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
             self._set_rgb_color(rgb)
         elif ATTR_BRIGHTNESS in kwargs:
@@ -213,5 +190,7 @@ class PrismatikLight(Light):
 
     def turn_off(self, **kwargs):
         """Turn the light off."""
+        #pylint: disable=unused-argument
+        _LOGGER.error("TURNING OFF WITH %s", *kwargs)
         self._set_cmd("status", "off")
         self._do_cmd("unlock")
