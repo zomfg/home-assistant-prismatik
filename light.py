@@ -135,6 +135,17 @@ class PrismatikLight(Light):
         self._set_cmd("color", pixels)
 
     @property
+    def hs_color(self):
+        """Return first pixel color on Prismatik."""
+        pixels = self._get_cmd("colors")
+        if pixels is None:
+            return None
+        rgb = re.match(r'^\d+-(\d+),(\d+),(\d+);', pixels)
+        if rgb is None:
+            return None
+        return color_util.color_RGB_to_hs(int(rgb.group(1)), int(rgb.group(2)), int(rgb.group(3)))
+
+    @property
     def name(self):
         """Return the name of the light."""
         return "Prismatik"
