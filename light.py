@@ -122,7 +122,7 @@ class PrismatikLight(Light):
         """Execute set-command Prismatik server."""
         return self._send("set" + cmd + ":" + str(value) + "\n") == "ok"
 
-    def _do_cmd(self, cmd: str, value: any = None) -> bool:
+    def _do_cmd(self, cmd: str, value: Optional[any] = None) -> bool:
         """Execute other command Prismatik server."""
         answer = self._send(cmd + (":" + str(value) if value else "") + "\n")
         return re.compile(r"^(ok|" + cmd + r":success)$").match(answer) is not None
