@@ -44,16 +44,6 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     apikey = config.get(CONF_API_KEY)
 
     add_entities([PrismatikLight(hass, host, port, apikey)])
-    # Setup connection with devices/cloud
-    # hub = awesomelights.Hub(host, username, password)
-
-    # Verify that passed in configuration works
-    # if not hub.is_valid_login():
-    #     _LOGGER.error("Could not connect to AwesomeLight hub")
-    #     return
-
-    # Add devices
-    # add_entities(AwesomeLight(light) for light in hub.lights())
 
 class PrismatikLight(Light):
     """Define a light."""
@@ -132,13 +122,13 @@ class PrismatikLight(Light):
 
     @property
     def name(self):
-        """Who me be."""
-        return "ambilight"
+        """Return the name of the light."""
+        return "Prismatik"
 
-    # @property
-    # def unique_id(self):
-    #     """ID me."""
-    #     return "ambilight42"
+    @property
+    def available(self):
+        """Return availability of the light."""
+        return self._sock is not None
 
     @property
     def is_on(self):
