@@ -116,27 +116,28 @@ class PrismatikLight(Light):
 
     def _get_cmd(self, cmd: str) -> Optional[str]:
         """Execute get-command Prismatik server."""
-        answer = self._send("get" + cmd + "\n")
+        answer = self._send(f"get{cmd}\n")
         if answer is not None:
-            matches = re.compile(cmd + r":(\S+)").match(answer)
+            matches = re.compile(fr"{cmd}:(\S+)").match(answer)
             if matches:
                 return matches.group(1)
         return None
 
     def _set_cmd(self, cmd: str, value: any) -> bool:
         """Execute set-command Prismatik server."""
-        return self._send("set" + cmd + ":" + str(value) + "\n") == "ok"
+        return self._send(f"set{cmd}:{value}\n") == "ok"
 
     def _do_cmd(self, cmd: str, value: Optional[any] = None) -> bool:
         """Execute other command Prismatik server."""
-        answer = self._send(cmd + (":" + str(value) if value else "") + "\n")
-        return re.compile(r"^(ok|" + cmd + r":success)$").match(answer) is not None
+        value = f":{value}" if value else ""
+        answer = self._send(f"{cmd}{value}\n")
+        return re.compile(fr"^(ok|{cmd}:success)$").match(answer) is not None
 
     def _set_rgb_color(self, rgb: tuple) -> None:
         """Generate and execude setcolor command on Prismatik server."""
         leds = self.leds
         rgb_color = ",".join(map(str, rgb))
-        pixels = ";".join(list([str(i) + "-" + rgb_color for i in range(1, leds + 1)]))
+        pixels = ";".join(list([f"{i}-{rgb_color}" for i in range(1, leds + 1)]))
         self._set_cmd("color", pixels)
 
     @property
