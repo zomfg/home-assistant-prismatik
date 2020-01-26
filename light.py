@@ -57,9 +57,10 @@ class PrismatikLight(Light):
         self._sock = None
 
     def _connect(self):
+        """Connect to Prismatik server."""
         try:
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._sock.settimeout(1)
+            self._sock.settimeout(0.1)
             self._sock.connect((self._host, self._port))
             # check header
             header = self._sock.recv(512).decode("ascii").strip()
@@ -67,12 +68,22 @@ class PrismatikLight(Light):
                 _LOGGER.error("Bad API header")
                 raise OSError()
         except OSError:
-            if self._sock:
-                self._sock.close()
-            self._sock = None
+            self._disconnect()
         return self._sock is not None
 
+    def _disconnect(self):
+        """Disconnect from Prismatik server."""
+        if self._sock:
+            self._sock.shutdown(socket.SHUT_RDWR)
+            self._sock.close()
+        self._sock = None
+
+    async def async_will_remove_from_hass(self):
+        """Disconnect from update signal."""
+        self._disconnect()
+
     def _send(self, buffer):
+        """Send command to Prismatik server."""
         if self._sock is None and self._connect() is False:
             return None
 
@@ -82,8 +93,7 @@ class PrismatikLight(Light):
             answer = self._sock.recv(4096).decode("ascii").strip()
         except OSError:
             _LOGGER.error("FAILED %s", buffer)
-            self._sock.close()
-            self._sock = None
+            self._disconnect()
             return None
         _LOGGER.error("RECEIVED %s", answer)
         if answer == "not locked":
@@ -99,6 +109,7 @@ class PrismatikLight(Light):
         return answer
 
     def _get_cmd(self, cmd):
+        """Execute get-command Prismatik server."""
         answer = self._send("get" + cmd + "\n")
         if answer is not None:
             matches = re.compile(cmd + r":(\S+)").match(answer)
@@ -107,14 +118,17 @@ class PrismatikLight(Light):
         return None
 
     def _set_cmd(self, cmd, value):
+        """Execute set-command Prismatik server."""
         answer = self._send("set" + cmd + ":" + str(value) + "\n")
         return answer == "ok"
 
     def _do_cmd(self, cmd, value=None):
+        """Execute other command Prismatik server."""
         answer = self._send(cmd + (":" + str(value) if value else "") + "\n")
         return re.compile(r"^(ok|" + cmd + r":success)$").match(answer) is not None
 
     def _set_rgb_color(self, rgb):
+        """Generate and execude setcolor command on Prismatik server."""
         leds = self.leds
         rgb_color = ','.join(map(str, rgb))
         pixels = ';'.join(list([str(i) + "-" + rgb_color for i in range(1, leds + 1)]))
