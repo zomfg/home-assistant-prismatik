@@ -6,38 +6,42 @@ from typing import Optional
 import voluptuous as vol
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
-    #ATTR_COLOR_TEMP,
+    # ATTR_COLOR_TEMP,
     ATTR_EFFECT,
     ATTR_HS_COLOR,
-    #ATTR_TRANSITION,
-    #EFFECT_COLORLOOP,
-    #EFFECT_RANDOM,
+    # ATTR_TRANSITION,
+    # EFFECT_COLORLOOP,
+    # EFFECT_RANDOM,
     PLATFORM_SCHEMA,
     SUPPORT_BRIGHTNESS,
     SUPPORT_COLOR,
-    #SUPPORT_COLOR_TEMP,
+    # SUPPORT_COLOR_TEMP,
     SUPPORT_EFFECT,
-    #SUPPORT_FLASH,
-    #SUPPORT_TRANSITION,
+    # SUPPORT_FLASH,
+    # SUPPORT_TRANSITION,
     Light,
 )
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_API_KEY
 import homeassistant.helpers.config_validation as cv
 import homeassistant.util.color as color_util
 from .const import DEFAULT_PORT
-#from .const import DOMAIN
+
+# from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_HOST): cv.string,
-    vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
-    vol.Optional(CONF_API_KEY): cv.string,
-})
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+    {
+        vol.Required(CONF_HOST): cv.string,
+        vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
+        vol.Optional(CONF_API_KEY): cv.string,
+    }
+)
+
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the Awesome Light platform."""
-    #pylint: disable=unused-argument
+    # pylint: disable=unused-argument
     # Assign configuration variables.
     # The configuration check takes care they are present.
     host = config[CONF_HOST]
@@ -45,6 +49,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     apikey = config.get(CONF_API_KEY)
 
     add_entities([PrismatikLight(hass, host, port, apikey)])
+
 
 class PrismatikLight(Light):
     """Define a light."""
@@ -65,7 +70,7 @@ class PrismatikLight(Light):
             self._sock.connect((self._host, self._port))
             # check header
             header = self._sock.recv(512).decode("ascii").strip()
-            if re.match(r'^Lightpack', header) is None:
+            if re.match(r"^Lightpack", header) is None:
                 _LOGGER.error("Bad API header")
                 raise OSError()
         except OSError:
@@ -130,8 +135,8 @@ class PrismatikLight(Light):
     def _set_rgb_color(self, rgb: tuple) -> None:
         """Generate and execude setcolor command on Prismatik server."""
         leds = self.leds
-        rgb_color = ','.join(map(str, rgb))
-        pixels = ';'.join(list([str(i) + "-" + rgb_color for i in range(1, leds + 1)]))
+        rgb_color = ",".join(map(str, rgb))
+        pixels = ";".join(list([str(i) + "-" + rgb_color for i in range(1, leds + 1)]))
         self._set_cmd("color", pixels)
 
     @property
@@ -140,10 +145,12 @@ class PrismatikLight(Light):
         pixels = self._get_cmd("colors")
         if pixels is None:
             return None
-        rgb = re.match(r'^\d+-(\d+),(\d+),(\d+);', pixels)
+        rgb = re.match(r"^\d+-(\d+),(\d+),(\d+);", pixels)
         if rgb is None:
             return None
-        return color_util.color_RGB_to_hs(int(rgb.group(1)), int(rgb.group(2)), int(rgb.group(3)))
+        return color_util.color_RGB_to_hs(
+            int(rgb.group(1)), int(rgb.group(2)), int(rgb.group(3))
+        )
 
     @property
     def name(self) -> str:
@@ -181,7 +188,7 @@ class PrismatikLight(Light):
     def effect_list(self) -> Optional[list]:
         """Profiles."""
         profiles = self._get_cmd("profiles")
-        return list(filter(None, profiles.split(';'))) if profiles else None
+        return list(filter(None, profiles.split(";"))) if profiles else None
 
     @property
     def effect(self) -> Optional[str]:
@@ -204,7 +211,7 @@ class PrismatikLight(Light):
 
     def turn_off(self, **kwargs) -> None:
         """Turn the light off."""
-        #pylint: disable=unused-argument
+        # pylint: disable=unused-argument
         # _LOGGER.error("TURNING OFF WITH %s", *kwargs)
         self._set_cmd("status", "off")
         self._do_cmd("unlock")
