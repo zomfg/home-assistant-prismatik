@@ -3,7 +3,7 @@ import logging
 import re
 import socket
 from enum import Enum
-from typing import Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import homeassistant.helpers.config_validation as cv
 import homeassistant.util.color as color_util
@@ -18,13 +18,8 @@ from homeassistant.components.light import (
     SUPPORT_EFFECT,
     Light,
 )
-
-from homeassistant.const import (
-    CONF_API_KEY,
-    CONF_HOST,
-    CONF_NAME,
-    CONF_PORT,
-)
+from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_NAME, CONF_PORT
+from homeassistant.core import HomeAssistant
 
 from .const import (
     CONF_PERSIST_ON_UNLOCK,
@@ -48,7 +43,12 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
+def setup_platform(
+    hass: HomeAssistant,
+    config: Dict,
+    add_entities: Callable[[List[Light], bool], None],
+    discovery_info: Optional[Any] = None,
+) -> None:
     """Set up the Awesome Light platform."""
     # pylint: disable=unused-argument
     # Assign configuration variables.
@@ -111,7 +111,14 @@ class PrismatikAPI(Enum):
 class PrismatikLight(Light):
     """Define a light."""
 
-    def __init__(self, hass, name, address, apikey, persist):
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        name: str,
+        address: Tuple,
+        apikey: Optional[str],
+        persist: bool,
+    ) -> None:
         """Intialize."""
         self._hass = hass
         self._name = name
@@ -120,8 +127,9 @@ class PrismatikLight(Light):
         self._persist = persist
         self._sock = None
 
-    def __del__(self):
+    def __del__(self) -> None:
         self._disconnect()
+        super()
 
     def _connect(self) -> bool:
         """Connect to Prismatik server."""
@@ -190,11 +198,11 @@ class PrismatikLight(Light):
                 return matches.group(1)
         return None
 
-    def _set_cmd(self, cmd: PrismatikAPI, value: any) -> bool:
+    def _set_cmd(self, cmd: PrismatikAPI, value: Any) -> bool:
         """Execute set-command Prismatik server."""
         return self._send(f"set{cmd}:{value}\n") == PrismatikAPI.AWR_OK
 
-    def _do_cmd(self, cmd: PrismatikAPI, value: Optional[any] = None) -> bool:
+    def _do_cmd(self, cmd: PrismatikAPI, value: Optional[Any] = None) -> bool:
         """Execute other command Prismatik server."""
         value = f":{value}" if value else ""
         answer = self._send(f"{cmd}{value}\n")
@@ -205,7 +213,7 @@ class PrismatikLight(Light):
             is not None
         )
 
-    def _set_rgb_color(self, rgb: tuple) -> None:
+    def _set_rgb_color(self, rgb: Tuple) -> None:
         """Generate and execude setcolor command on Prismatik server."""
         leds = self.leds
         rgb_color = ",".join(map(str, rgb))
@@ -213,7 +221,7 @@ class PrismatikLight(Light):
         self._set_cmd(PrismatikAPI.CMD_SET_COLOR, pixels)
 
     @property
-    def hs_color(self) -> Optional[list]:
+    def hs_color(self) -> Optional[List]:
         """Return first pixel color on Prismatik."""
         pixels = self._get_cmd(PrismatikAPI.CMD_GET_COLOR)
         if pixels is None:
@@ -258,7 +266,7 @@ class PrismatikLight(Light):
         return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_EFFECT
 
     @property
-    def effect_list(self) -> Optional[list]:
+    def effect_list(self) -> Optional[List]:
         """Profiles."""
         profiles = self._get_cmd(PrismatikAPI.CMD_GET_PROFILES)
         return list(filter(None, profiles.split(";"))) if profiles else None
@@ -268,7 +276,7 @@ class PrismatikLight(Light):
         """Current profile."""
         return self._get_cmd(PrismatikAPI.CMD_GET_PROFILE)
 
-    def turn_on(self, **kwargs) -> None:
+    def turn_on(self, **kwargs: Any) -> None:
         """Turn the light on."""
         self._set_cmd(PrismatikAPI.CMD_SET_MODE, PrismatikAPI.MOD_MOODLIGHT)
         self._set_cmd(
@@ -287,7 +295,7 @@ class PrismatikLight(Light):
         elif ATTR_EFFECT in kwargs:
             self._set_cmd(PrismatikAPI.CMD_SET_PROFILE, kwargs[ATTR_EFFECT])
 
-    def turn_off(self, **kwargs) -> None:
+    def turn_off(self, **kwargs: Any) -> None:
         """Turn the light off."""
         # pylint: disable=unused-argument
         # _LOGGER.error("TURNING OFF WITH %s", *kwargs)
