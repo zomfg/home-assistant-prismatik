@@ -167,7 +167,7 @@ class PrismatikLight(Light):
         if self._sock is None and self._connect() is False:
             return None
 
-        # _LOGGER.error("SENDING %s", buffer)
+        _LOGGER.debug("SENDING: %s", buffer)
         try:
             self._sock.sendall(buffer.encode("ascii"))
             answer = self._sock.recv(4096).decode("ascii").strip()
@@ -176,7 +176,7 @@ class PrismatikLight(Light):
             self._disconnect()
             answer = None
         else:
-            # _LOGGER.error("RECEIVED %s", answer)
+            _LOGGER.debug("RECEIVED: %s", answer)
             if answer == PrismatikAPI.AWR_NOT_LOCKED:
                 if self._do_cmd(PrismatikAPI.CMD_LOCK):
                     return self._send(buffer)
@@ -284,7 +284,6 @@ class PrismatikLight(Light):
             PrismatikAPI.STS_ON if self._persist else PrismatikAPI.STS_OFF,
         )
         self._set_cmd(PrismatikAPI.CMD_SET_STATUS, PrismatikAPI.STS_ON)
-        # _LOGGER.error("TURNING ON WITH %s", *kwargs)
         if ATTR_HS_COLOR in kwargs:
             rgb = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
             self._set_rgb_color(rgb)
@@ -298,6 +297,5 @@ class PrismatikLight(Light):
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the light off."""
         # pylint: disable=unused-argument
-        # _LOGGER.error("TURNING OFF WITH %s", *kwargs)
         self._set_cmd(PrismatikAPI.CMD_SET_STATUS, PrismatikAPI.STS_OFF)
         self._do_cmd(PrismatikAPI.CMD_UNLOCK)
