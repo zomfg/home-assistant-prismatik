@@ -98,6 +98,9 @@ class PrismatikLight(Light):
         self._apikey = apikey
         self._sock = None
 
+    def __del__(self):
+        self._disconnect()
+
     def _connect(self) -> bool:
         """Connect to Prismatik server."""
         try:
@@ -108,17 +111,22 @@ class PrismatikLight(Light):
             header = self._sock.recv(512).decode("ascii").strip()
             if re.match(fr"^{PrismatikAPI.AWR_HEADER}", header) is None:
                 _LOGGER.error("Bad API header")
-                raise OSError()
+                raise OSError
         except OSError:
+            _LOGGER.error("Could not connect to Prismatik")
             self._disconnect()
         return self._sock is not None
 
     def _disconnect(self) -> None:
         """Disconnect from Prismatik server."""
-        if self._sock:
-            self._sock.shutdown(socket.SHUT_RDWR)
-            self._sock.close()
-        self._sock = None
+        try:
+            if self._sock:
+                self._sock.shutdown(socket.SHUT_RDWR)
+                self._sock.close()
+        except OSError:
+            return
+        finally:
+            self._sock = None
 
     async def async_will_remove_from_hass(self) -> None:
         """Disconnect from update signal."""
@@ -134,20 +142,21 @@ class PrismatikLight(Light):
             self._sock.sendall(buffer.encode("ascii"))
             answer = self._sock.recv(4096).decode("ascii").strip()
         except OSError:
-            # _LOGGER.error("FAILED %s", buffer)
+            _LOGGER.error("Prismatik went away?")
             self._disconnect()
-            return None
-        # _LOGGER.error("RECEIVED %s", answer)
-        if answer == PrismatikAPI.AWR_NOTLOCKED:
-            if self._do_cmd(PrismatikAPI.CMD_LOCK):
-                return self._send(buffer)
-            _LOGGER.error("Could not lock Prismatik")
             answer = None
-        if answer == PrismatikAPI.AWR_AUTHREQ:
-            if self._apikey and self._do_cmd(PrismatikAPI.CMD_APIKEY, self._apikey):
-                return self._send(buffer)
-            _LOGGER.error("Prismatik authentication failed")
-            answer = None
+        else:
+            # _LOGGER.error("RECEIVED %s", answer)
+            if answer == PrismatikAPI.AWR_NOTLOCKED:
+                if self._do_cmd(PrismatikAPI.CMD_LOCK):
+                    return self._send(buffer)
+                _LOGGER.error("Could not lock Prismatik")
+                answer = None
+            if answer == PrismatikAPI.AWR_AUTHREQ:
+                if self._apikey and self._do_cmd(PrismatikAPI.CMD_APIKEY, self._apikey):
+                    return self._send(buffer)
+                _LOGGER.error("Prismatik authentication failed")
+                answer = None
         return answer
 
     def _get_cmd(self, cmd: PrismatikAPI) -> Optional[str]:
