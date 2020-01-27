@@ -145,7 +145,7 @@ class PrismatikLight(Light):
         if answer == PrismatikAPI.AWR_AUTHREQ:
             if self._apikey and self._do_cmd(PrismatikAPI.CMD_APIKEY, self._apikey):
                 return self._send(buffer)
-            _LOGGER.error("Could not lock Prismatik")
+            _LOGGER.error("Prismatik authentication failed")
             answer = None
         return answer
 
