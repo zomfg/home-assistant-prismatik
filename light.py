@@ -66,25 +66,33 @@ class PrismatikAPI(Enum):
 
     CMD_LOCK = "lock"
     CMD_UNLOCK = "unlock"
-    CMD_GETCOLOR = "colors"
-    CMD_SETCOLOR = "color"
+
+    CMD_GET_COLOR = "colors"
+    CMD_SET_COLOR = "color"
+
     CMD_APIKEY = "apikey"
-    CMD_GETPROFILE = "profile"
-    CMD_SETPROFILE = CMD_GETPROFILE
-    CMD_GETPROFILES = "profiles"
-    CMD_GETBRIGHTNESS = "brightness"
-    CMD_SETBRIGHTNESS = CMD_GETBRIGHTNESS
-    CMD_GETSTATUS = "status"
-    CMD_SETSTATUS = CMD_GETSTATUS
-    CMD_GETCOUNTLEDS = "countleds"
-    CMD_PERSISTONUNLOCK = "persistonunlock"
-    CMD_GETMODE = "mode"
-    CMD_SETMODE = CMD_GETMODE
+
+    CMD_GET_PROFILE = "profile"
+    CMD_SET_PROFILE = CMD_GET_PROFILE
+    CMD_GET_PROFILES = "profiles"
+
+    CMD_GET_BRIGHTNESS = "brightness"
+    CMD_SET_BRIGHTNESS = CMD_GET_BRIGHTNESS
+
+    CMD_GET_STATUS = "status"
+    CMD_SET_STATUS = CMD_GET_STATUS
+
+    CMD_GET_COUNTLEDS = "countleds"
+
+    CMD_SET_PERSIST_ON_UNLOCK = "persistonunlock"
+
+    CMD_GET_MODE = "mode"
+    CMD_SET_MODE = CMD_GET_MODE
 
     AWR_OK = "ok"
     AWR_SUCCESS = "success"
-    AWR_NOTLOCKED = "not locked"
-    AWR_AUTHREQ = "authorization required"
+    AWR_NOT_LOCKED = "not locked"
+    AWR_AUTH_REQ = "authorization required"
     AWR_HEADER = "Lightpack API"
 
     STS_ON = "on"
@@ -161,12 +169,12 @@ class PrismatikLight(Light):
             answer = None
         else:
             # _LOGGER.error("RECEIVED %s", answer)
-            if answer == PrismatikAPI.AWR_NOTLOCKED:
+            if answer == PrismatikAPI.AWR_NOT_LOCKED:
                 if self._do_cmd(PrismatikAPI.CMD_LOCK):
                     return self._send(buffer)
                 _LOGGER.error("Could not lock Prismatik")
                 answer = None
-            if answer == PrismatikAPI.AWR_AUTHREQ:
+            if answer == PrismatikAPI.AWR_AUTH_REQ:
                 if self._apikey and self._do_cmd(PrismatikAPI.CMD_APIKEY, self._apikey):
                     return self._send(buffer)
                 _LOGGER.error("Prismatik authentication failed")
@@ -202,12 +210,12 @@ class PrismatikLight(Light):
         leds = self.leds
         rgb_color = ",".join(map(str, rgb))
         pixels = ";".join(list([f"{i}-{rgb_color}" for i in range(1, leds + 1)]))
-        self._set_cmd(PrismatikAPI.CMD_SETCOLOR, pixels)
+        self._set_cmd(PrismatikAPI.CMD_SET_COLOR, pixels)
 
     @property
     def hs_color(self) -> Optional[list]:
         """Return first pixel color on Prismatik."""
-        pixels = self._get_cmd(PrismatikAPI.CMD_GETCOLOR)
+        pixels = self._get_cmd(PrismatikAPI.CMD_GET_COLOR)
         if pixels is None:
             return None
         rgb = re.match(r"^\d+-(\d+),(\d+),(\d+);", pixels)
@@ -230,18 +238,18 @@ class PrismatikLight(Light):
     @property
     def is_on(self) -> bool:
         """Is this thing on."""
-        return self._get_cmd(PrismatikAPI.CMD_GETSTATUS) == PrismatikAPI.STS_ON
+        return self._get_cmd(PrismatikAPI.CMD_GET_STATUS) == PrismatikAPI.STS_ON
 
     @property
     def leds(self) -> int:
         """Return leds of the light."""
-        countleds = self._get_cmd(PrismatikAPI.CMD_GETCOUNTLEDS)
+        countleds = self._get_cmd(PrismatikAPI.CMD_GET_COUNTLEDS)
         return int(countleds) if countleds else 0
 
     @property
     def brightness(self) -> Optional[int]:
         """Return brightness of the light."""
-        brightness = self._get_cmd(PrismatikAPI.CMD_GETBRIGHTNESS)
+        brightness = self._get_cmd(PrismatikAPI.CMD_GET_BRIGHTNESS)
         return round(int(brightness) * 2.55) if brightness else None
 
     @property
@@ -252,36 +260,36 @@ class PrismatikLight(Light):
     @property
     def effect_list(self) -> Optional[list]:
         """Profiles."""
-        profiles = self._get_cmd(PrismatikAPI.CMD_GETPROFILES)
+        profiles = self._get_cmd(PrismatikAPI.CMD_GET_PROFILES)
         return list(filter(None, profiles.split(";"))) if profiles else None
 
     @property
     def effect(self) -> Optional[str]:
         """Current profile."""
-        return self._get_cmd(PrismatikAPI.CMD_GETPROFILE)
+        return self._get_cmd(PrismatikAPI.CMD_GET_PROFILE)
 
     def turn_on(self, **kwargs) -> None:
         """Turn the light on."""
-        self._set_cmd(PrismatikAPI.CMD_SETMODE, PrismatikAPI.MOD_MOODLIGHT)
+        self._set_cmd(PrismatikAPI.CMD_SET_MODE, PrismatikAPI.MOD_MOODLIGHT)
         self._set_cmd(
-            PrismatikAPI.CMD_PERSISTONUNLOCK,
+            PrismatikAPI.CMD_SET_PERSIST_ON_UNLOCK,
             PrismatikAPI.STS_ON if self._persist else PrismatikAPI.STS_OFF,
         )
-        self._set_cmd(PrismatikAPI.CMD_SETSTATUS, PrismatikAPI.STS_ON)
+        self._set_cmd(PrismatikAPI.CMD_SET_STATUS, PrismatikAPI.STS_ON)
         # _LOGGER.error("TURNING ON WITH %s", *kwargs)
         if ATTR_HS_COLOR in kwargs:
             rgb = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
             self._set_rgb_color(rgb)
         elif ATTR_BRIGHTNESS in kwargs:
             self._set_cmd(
-                PrismatikAPI.CMD_SETBRIGHTNESS, round(kwargs[ATTR_BRIGHTNESS] / 2.55)
+                PrismatikAPI.CMD_SET_BRIGHTNESS, round(kwargs[ATTR_BRIGHTNESS] / 2.55)
             )
         elif ATTR_EFFECT in kwargs:
-            self._set_cmd(PrismatikAPI.CMD_SETPROFILE, kwargs[ATTR_EFFECT])
+            self._set_cmd(PrismatikAPI.CMD_SET_PROFILE, kwargs[ATTR_EFFECT])
 
     def turn_off(self, **kwargs) -> None:
         """Turn the light off."""
         # pylint: disable=unused-argument
         # _LOGGER.error("TURNING OFF WITH %s", *kwargs)
-        self._set_cmd(PrismatikAPI.CMD_SETSTATUS, PrismatikAPI.STS_OFF)
+        self._set_cmd(PrismatikAPI.CMD_SET_STATUS, PrismatikAPI.STS_OFF)
         self._do_cmd(PrismatikAPI.CMD_UNLOCK)
