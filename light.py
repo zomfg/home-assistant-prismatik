@@ -218,7 +218,7 @@ class PrismatikLight(Light):
     def brightness(self) -> Optional[int]:
         """Return brightness of the light."""
         brightness = self._get_cmd(PrismatikAPI.CMD_GETBRIGHTNESS)
-        return int(brightness) * 2.55 if brightness else None
+        return round(int(brightness) * 2.55) if brightness else None
 
     @property
     def supported_features(self) -> int:
@@ -247,7 +247,7 @@ class PrismatikLight(Light):
             self._set_rgb_color(rgb)
         elif ATTR_BRIGHTNESS in kwargs:
             self._set_cmd(
-                PrismatikAPI.CMD_SETBRIGHTNESS, int(kwargs[ATTR_BRIGHTNESS] / 2.55)
+                PrismatikAPI.CMD_SETBRIGHTNESS, round(kwargs[ATTR_BRIGHTNESS] / 2.55)
             )
         elif ATTR_EFFECT in kwargs:
             self._set_cmd(PrismatikAPI.CMD_SETPROFILE, kwargs[ATTR_EFFECT])
