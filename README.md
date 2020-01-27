@@ -13,7 +13,16 @@ or manually download to `/hass/config/custom_components` and rename `home-assist
 light:
   - platform: prismatik
     host: 192.168.42.42
+
+    # optional
     port: 3636
-    name: "Optional Name"
-    api_key: OPTIONAL_KEY
+
+    # optional
+    name: "Prismatik"
+
+    # optional
+    api_key: '{API_KEY}'
+
+    # optional, tell Prismatik to keep colors until reset via restart/mode change...
+    persist_on_unlock: false
 ```

@@ -18,11 +18,20 @@ from homeassistant.components.light import (
     SUPPORT_EFFECT,
     Light,
 )
-from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_NAME, CONF_PORT
 
-from .const import DEFAULT_NAME, DEFAULT_PORT
+from homeassistant.const import (
+    CONF_API_KEY,
+    CONF_HOST,
+    CONF_NAME,
+    CONF_PORT,
+)
 
-# from .const import DOMAIN
+from .const import (
+    CONF_PERSIST_ON_UNLOCK,
+    DEFAULT_NAME,
+    DEFAULT_PERSIST_ON_UNLOCK,
+    DEFAULT_PORT,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,6 +41,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
         vol.Optional(CONF_API_KEY): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+        vol.Optional(
+            CONF_PERSIST_ON_UNLOCK, default=DEFAULT_PERSIST_ON_UNLOCK
+        ): cv.boolean,
     }
 )
 
@@ -44,8 +56,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     address = (config[CONF_HOST], config[CONF_PORT])
     name = config[CONF_NAME]
     apikey = config.get(CONF_API_KEY)
+    persist = config[CONF_PERSIST_ON_UNLOCK]
 
-    add_entities([PrismatikLight(hass, name, address, apikey)])
+    add_entities([PrismatikLight(hass, name, address, apikey, persist)])
 
 
 class PrismatikAPI(Enum):
@@ -90,12 +103,13 @@ class PrismatikAPI(Enum):
 class PrismatikLight(Light):
     """Define a light."""
 
-    def __init__(self, hass, name, address, apikey):
+    def __init__(self, hass, name, address, apikey, persist):
         """Intialize."""
         self._hass = hass
         self._name = name
         self._address = address
         self._apikey = apikey
+        self._persist = persist
         self._sock = None
 
     def __del__(self):
@@ -249,7 +263,10 @@ class PrismatikLight(Light):
     def turn_on(self, **kwargs) -> None:
         """Turn the light on."""
         self._set_cmd(PrismatikAPI.CMD_SETMODE, PrismatikAPI.MOD_MOODLIGHT)
-        self._set_cmd(PrismatikAPI.CMD_PERSISTONUNLOCK, PrismatikAPI.STS_ON)
+        self._set_cmd(
+            PrismatikAPI.CMD_PERSISTONUNLOCK,
+            PrismatikAPI.STS_ON if self._persist else PrismatikAPI.STS_OFF,
+        )
         self._set_cmd(PrismatikAPI.CMD_SETSTATUS, PrismatikAPI.STS_ON)
         # _LOGGER.error("TURNING ON WITH %s", *kwargs)
         if ATTR_HS_COLOR in kwargs:
