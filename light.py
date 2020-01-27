@@ -17,9 +17,9 @@ from homeassistant.components.light import (
     SUPPORT_EFFECT,
     Light,
 )
-from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_PORT
+from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_NAME, CONF_PORT
 
-from .const import DEFAULT_PORT
+from .const import DEFAULT_NAME, DEFAULT_PORT
 
 # from .const import DOMAIN
 
@@ -30,6 +30,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Required(CONF_HOST): cv.string,
         vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
         vol.Optional(CONF_API_KEY): cv.string,
+        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
     }
 )
 
@@ -39,21 +40,21 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     # pylint: disable=unused-argument
     # Assign configuration variables.
     # The configuration check takes care they are present.
-    host = config[CONF_HOST]
-    port = config[CONF_PORT]
+    address = (config[CONF_HOST], config[CONF_PORT])
+    name = config[CONF_NAME]
     apikey = config.get(CONF_API_KEY)
 
-    add_entities([PrismatikLight(hass, host, port, apikey)])
+    add_entities([PrismatikLight(hass, name, address, apikey)])
 
 
 class PrismatikLight(Light):
     """Define a light."""
 
-    def __init__(self, hass, host, port, apikey):
+    def __init__(self, hass, name, address, apikey):
         """Intialize."""
         self._hass = hass
-        self._host = host
-        self._port = port
+        self._name = name
+        self._address = address
         self._apikey = apikey
         self._sock = None
 
@@ -62,7 +63,7 @@ class PrismatikLight(Light):
         try:
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._sock.settimeout(0.1)
-            self._sock.connect((self._host, self._port))
+            self._sock.connect(self._address)
             # check header
             header = self._sock.recv(512).decode("ascii").strip()
             if re.match(r"^Lightpack", header) is None:
@@ -151,7 +152,7 @@ class PrismatikLight(Light):
     @property
     def name(self) -> str:
         """Return the name of the light."""
-        return "Prismatik"
+        return self._name
 
     @property
     def available(self) -> bool:
