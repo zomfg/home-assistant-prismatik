@@ -72,6 +72,7 @@ class PrismatikAPI(Enum):
     AWR_SUCCESS = "success"
     AWR_NOTLOCKED = "not locked"
     AWR_AUTHREQ = "authorization required"
+    AWR_HEADER = "Lightpack API"
 
     STS_ON = "on"
     STS_OFF = "off"
@@ -105,7 +106,7 @@ class PrismatikLight(Light):
             self._sock.connect(self._address)
             # check header
             header = self._sock.recv(512).decode("ascii").strip()
-            if re.match(r"^Lightpack", header) is None:
+            if re.match(fr"^{PrismatikAPI.AWR_HEADER}", header) is None:
                 _LOGGER.error("Bad API header")
                 raise OSError()
         except OSError:
