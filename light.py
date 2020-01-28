@@ -245,7 +245,7 @@ class PrismatikLight(Light):
 
     @property
     def is_on(self) -> bool:
-        """Is this thing on."""
+        """Return light status."""
         return self._get_cmd(PrismatikAPI.CMD_GET_STATUS) == PrismatikAPI.STS_ON
 
     @property
@@ -267,13 +267,13 @@ class PrismatikLight(Light):
 
     @property
     def effect_list(self) -> Optional[List]:
-        """Profiles."""
+        """Return profile list."""
         profiles = self._get_cmd(PrismatikAPI.CMD_GET_PROFILES)
         return list(filter(None, profiles.split(";"))) if profiles else None
 
     @property
     def effect(self) -> Optional[str]:
-        """Current profile."""
+        """Return current profile."""
         return self._get_cmd(PrismatikAPI.CMD_GET_PROFILE)
 
     def turn_on(self, **kwargs: Any) -> None:
