@@ -137,14 +137,15 @@ class PrismatikLight(Light):
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._sock.settimeout(0.1)
             self._sock.connect(self._address)
+        except OSError:
+            _LOGGER.error("Could not connect to Prismatik")
+            self._disconnect()
+        else:
             # check header
             header = self._sock.recv(512).decode("ascii").strip()
             if re.match(fr"^{PrismatikAPI.AWR_HEADER}", header) is None:
                 _LOGGER.error("Bad API header")
-                raise OSError
-        except OSError:
-            _LOGGER.error("Could not connect to Prismatik")
-            self._disconnect()
+                self._disconnect()
         return self._sock is not None
 
     def _disconnect(self) -> None:
