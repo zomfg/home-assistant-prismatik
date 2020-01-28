@@ -217,7 +217,7 @@ class PrismatikLight(Light):
         """Generate and execude setcolor command on Prismatik server."""
         leds = self.leds
         rgb_color = ",".join(map(str, rgb))
-        pixels = ";".join(list([f"{i}-{rgb_color}" for i in range(1, leds + 1)]))
+        pixels = ";".join([f"{led}-{rgb_color}" for led in range(1, leds + 1)])
         self._set_cmd(PrismatikAPI.CMD_SET_COLOR, pixels)
 
     @property
