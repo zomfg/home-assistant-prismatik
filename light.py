@@ -109,7 +109,7 @@ class PrismatikAPI(Enum):
 
 
 class PrismatikLight(Light):
-    """Define a light."""
+    """Representation of Prismatik."""
 
     def __init__(
         self,
@@ -128,6 +128,7 @@ class PrismatikLight(Light):
         self._sock = None
 
     def __del__(self) -> None:
+        """Clean up."""
         self._disconnect()
         super()
 
@@ -223,7 +224,7 @@ class PrismatikLight(Light):
 
     @property
     def hs_color(self) -> Optional[List]:
-        """Return first pixel color on Prismatik."""
+        """Return the hue and saturation color value [float, float]."""
         pixels = self._get_cmd(PrismatikAPI.CMD_GET_COLOR)
         if pixels is None:
             return None
@@ -251,13 +252,13 @@ class PrismatikLight(Light):
 
     @property
     def leds(self) -> int:
-        """Return leds of the light."""
+        """Return the led count of the light."""
         countleds = self._get_cmd(PrismatikAPI.CMD_GET_COUNTLEDS)
         return int(countleds) if countleds else 0
 
     @property
     def brightness(self) -> Optional[int]:
-        """Return brightness of the light."""
+        """Return the brightness of this light between 0..255."""
         brightness = self._get_cmd(PrismatikAPI.CMD_GET_BRIGHTNESS)
         return round(int(brightness) * 2.55) if brightness else None
 
