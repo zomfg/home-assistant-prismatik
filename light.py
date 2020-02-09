@@ -136,7 +136,7 @@ class PrismatikLight(Light):
         """Connect to Prismatik server."""
         try:
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._sock.settimeout(0.1)
+            self._sock.settimeout(3)
             self._sock.connect(self._address)
         except OSError:
             _LOGGER.error("Could not connect to Prismatik")
