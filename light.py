@@ -195,7 +195,7 @@ class PrismatikLight(Light):
         """Execute get-command Prismatik server."""
         answer = self._send(f"get{cmd}\n")
         if answer is not None:
-            matches = re.compile(fr"{cmd}:(\S+)").match(answer)
+            matches = re.compile(fr"{cmd}:(.+)").match(answer)
             if matches:
                 return matches.group(1)
         return None
