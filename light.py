@@ -211,7 +211,7 @@ class PrismatikLight(Light):
         return (
             re.compile(
                 fr"^(PrismatikAPI.AWR_OK|{cmd}:{PrismatikAPI.AWR_SUCCESS})$"
-            ).match(answer)
+            ).match(answer or "")
             is not None
         )
 
