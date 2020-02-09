@@ -194,11 +194,8 @@ class PrismatikLight(Light):
     def _get_cmd(self, cmd: PrismatikAPI) -> Optional[str]:
         """Execute get-command Prismatik server."""
         answer = self._send(f"get{cmd}\n")
-        if answer is not None:
-            matches = re.compile(fr"{cmd}:(.+)").match(answer)
-            if matches:
-                return matches.group(1)
-        return None
+        matches = re.compile(fr"{cmd}:(.+)").match(answer or "")
+        return matches.group(1) if matches else None
 
     def _set_cmd(self, cmd: PrismatikAPI, value: Any) -> bool:
         """Execute set-command Prismatik server."""
