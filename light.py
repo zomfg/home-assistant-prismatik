@@ -18,12 +18,19 @@ from homeassistant.components.light import (
     SUPPORT_EFFECT,
     Light,
 )
-from homeassistant.const import CONF_API_KEY, CONF_HOST, CONF_NAME, CONF_PORT
+from homeassistant.const import (
+    CONF_API_KEY,
+    CONF_HOST,
+    CONF_NAME,
+    CONF_PORT,
+    CONF_PROFILE_NAME,
+)
 from homeassistant.core import HomeAssistant
 
 from .const import (
     DEFAULT_NAME,
     DEFAULT_PORT,
+    DEFAULT_PROFILE_NAME,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,6 +41,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
         vol.Optional(CONF_API_KEY): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+        vol.Optional(CONF_PROFILE_NAME, default=DEFAULT_PROFILE_NAME): cv.string,
     }
 )
 
@@ -51,8 +59,9 @@ def setup_platform(
     address = (config[CONF_HOST], config[CONF_PORT])
     name = config[CONF_NAME]
     apikey = config.get(CONF_API_KEY)
+    profile = config.get(CONF_PROFILE_NAME)
 
-    add_entities([PrismatikLight(hass, name, address, apikey)])
+    add_entities([PrismatikLight(hass, name, address, profile, apikey)])
 
 
 class PrismatikAPI(Enum):
@@ -69,6 +78,7 @@ class PrismatikAPI(Enum):
     CMD_GET_PROFILE = "profile"
     CMD_SET_PROFILE = CMD_GET_PROFILE
     CMD_GET_PROFILES = "profiles"
+    CMD_NEW_PROFILE = "newprofile"
 
     CMD_GET_BRIGHTNESS = "brightness"
     CMD_SET_BRIGHTNESS = CMD_GET_BRIGHTNESS
@@ -110,6 +120,7 @@ class PrismatikLight(Light):
         hass: HomeAssistant,
         name: str,
         address: Tuple,
+        profile: str,
         apikey: Optional[str],
     ) -> None:
         """Intialize."""
@@ -118,6 +129,7 @@ class PrismatikLight(Light):
         self._address = address
         self._apikey = apikey
         self._sock = None
+        self._profile_name = profile
 
     def __del__(self) -> None:
         """Clean up."""
@@ -269,24 +281,26 @@ class PrismatikLight(Light):
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light on."""
-        self._set_cmd(PrismatikAPI.CMD_SET_MODE, PrismatikAPI.MOD_MOODLIGHT)
-        self._set_cmd(
-            PrismatikAPI.CMD_SET_PERSIST_ON_UNLOCK,
-            PrismatikAPI.STS_ON
-        )
         self._set_cmd(PrismatikAPI.CMD_SET_STATUS, PrismatikAPI.STS_ON)
-        if ATTR_HS_COLOR in kwargs:
-            rgb = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
-            self._set_rgb_color(rgb)
+        if ATTR_EFFECT in kwargs:
+            self._set_cmd(PrismatikAPI.CMD_SET_PERSIST_ON_UNLOCK, PrismatikAPI.STS_OFF)
+            self._set_cmd(PrismatikAPI.CMD_SET_PROFILE, kwargs[ATTR_EFFECT])
         elif ATTR_BRIGHTNESS in kwargs:
             self._set_cmd(
                 PrismatikAPI.CMD_SET_BRIGHTNESS, round(kwargs[ATTR_BRIGHTNESS] / 2.55)
             )
-        elif ATTR_EFFECT in kwargs:
-            self._set_cmd(PrismatikAPI.CMD_SET_PROFILE, kwargs[ATTR_EFFECT])
+            on_unlock = PrismatikAPI.STS_OFF
+            if self._get_cmd(PrismatikAPI.CMD_GET_PROFILE) == self._profile_name:
+                on_unlock = PrismatikAPI.STS_ON
+            self._set_cmd(PrismatikAPI.CMD_SET_PERSIST_ON_UNLOCK, on_unlock)
+        elif ATTR_HS_COLOR in kwargs:
+            rgb = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
+            self._do_cmd(PrismatikAPI.CMD_NEW_PROFILE, self._profile_name)
+            self._set_cmd(PrismatikAPI.CMD_SET_PERSIST_ON_UNLOCK, PrismatikAPI.STS_ON)
+            self._set_rgb_color(rgb)
+        self._do_cmd(PrismatikAPI.CMD_UNLOCK)
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn the light off."""
         # pylint: disable=unused-argument
         self._set_cmd(PrismatikAPI.CMD_SET_STATUS, PrismatikAPI.STS_OFF)
-        self._do_cmd(PrismatikAPI.CMD_UNLOCK)

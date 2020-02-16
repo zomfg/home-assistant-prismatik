@@ -2,4 +2,5 @@
 
 DEFAULT_NAME = "Prismatik"
 DEFAULT_PORT = "3636"
+DEFAULT_PROFILE_NAME = "hass"
 DOMAIN = "prismatik"

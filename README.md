@@ -22,4 +22,7 @@ light:
 
     # optional
     api_key: '{API_KEY}'
+
+    # optional: profile name to use so other profiles don't get altered
+    profile_name: hass
 ```
