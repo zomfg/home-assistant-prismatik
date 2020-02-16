@@ -1,13 +1,8 @@
 {
   "domain": "prismatik",
   "name": "Prismatik",
-  "config_flow": true,
-  "documentation": "https://www.home-assistant.io/integrations/prismatik",
-  "requirements": [],
-  "ssdp": [],
-  "zeroconf": [],
-  "homekit": {},
-  "dependencies": [],
+  "config_flow": false,
+  "documentation": "https://github.com/zomfg/home-assistant-prismatik",
   "codeowners": [
     "@zomfg"
   ]
