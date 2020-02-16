@@ -1,10 +1,11 @@
 **Prismatik**
+
 uncheck `Listen only on local interface`
 
 **HA server**
 ```
 cd /hass/config/custom_components
-git clone https://github.com/zomfg/home-assistant-prismatik.git prismatik
+git clone --branch master --depth 1 https://github.com/zomfg/home-assistant-prismatik.git prismatik
 ```
 or manually download to `/hass/config/custom_components` and rename `home-assistant-prismatik` to `prismatik`
 
@@ -26,3 +27,5 @@ light:
     # optional: profile name to use so other profiles don't get altered
     profile_name: hass
 ```
+
+tested on HA 0.105.4 and Prismatik [5.2.11.21](https://github.com/psieg/Lightpack/releases/tag/5.11.2.21)
