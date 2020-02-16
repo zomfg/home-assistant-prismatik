@@ -22,7 +22,4 @@ light:
 
     # optional
     api_key: '{API_KEY}'
-
-    # optional, tell Prismatik to keep colors until reset via restart/mode change...
-    persist_on_unlock: false
 ```
