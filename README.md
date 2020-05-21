@@ -3,9 +3,14 @@
 uncheck `Listen only on local interface`
 
 **HA server**
-```
+```sh
 cd /hass/config/custom_components
+
+# for the latest version
 git clone --branch master --depth 1 https://github.com/zomfg/home-assistant-prismatik.git prismatik
+
+# or for a specific HA version, see https://github.com/zomfg/home-assistant-prismatik/tags for available versions
+git clone --branch ha-0.110 --depth 1 https://github.com/zomfg/home-assistant-prismatik.git prismatik
 ```
 or manually download to `/hass/config/custom_components` and rename `home-assistant-prismatik` to `prismatik`
 
