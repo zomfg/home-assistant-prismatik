@@ -16,7 +16,7 @@ from homeassistant.components.light import (
     SUPPORT_BRIGHTNESS,
     SUPPORT_COLOR,
     SUPPORT_EFFECT,
-    Light,
+    LightEntity,
 )
 from homeassistant.const import (
     CONF_API_KEY,
@@ -49,7 +49,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 def setup_platform(
     hass: HomeAssistant,
     config: Dict,
-    add_entities: Callable[[List[Light], bool], None],
+    add_entities: Callable[[List[LightEntity], bool], None],
     discovery_info: Optional[Any] = None,
 ) -> None:
     """Set up the Awesome Light platform."""
@@ -112,7 +112,7 @@ class PrismatikAPI(Enum):
         return self.value == other
 
 
-class PrismatikLight(Light):
+class PrismatikLight(LightEntity):
     """Representation of Prismatik."""
 
     def __init__(
