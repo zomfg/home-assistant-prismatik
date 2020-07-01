@@ -130,6 +130,7 @@ class PrismatikLight(LightEntity):
         self._apikey = apikey
         self._sock = None
         self._profile_name = profile
+        self._retries = 5
 
     def __del__(self) -> None:
         """Clean up."""
@@ -143,7 +144,9 @@ class PrismatikLight(LightEntity):
             self._sock.settimeout(3)
             self._sock.connect(self._address)
         except OSError:
-            _LOGGER.error("Could not connect to Prismatik")
+            if self._retries > 0:
+                self._retries -= 1
+                _LOGGER.error("Could not connect to Prismatik")
             self._disconnect()
         else:
             # check header
