@@ -1,3 +1,12 @@
+<p align="center">
+  <img src="https://github.com/zomfg/Lightpack/blob/master/Software/res/icons/Prismatik.png" width="80" />
+  &nbsp;
+  &nbsp;
+  &nbsp;
+  <img src="https://github.com/home-assistant/assets/blob/master/logo-pretty.png" width="80" />
+</p>
+
+
 **Prismatik**
 
 uncheck `Listen only on local interface`
