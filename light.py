@@ -130,7 +130,7 @@ class PrismatikLight(LightEntity):
         self._apikey = apikey
         self._sock = None
         self._profile_name = profile
-        self._retries = 5
+        self._retries = CONNECTION_RETRY_ERRORS
 
     def __del__(self) -> None:
         """Clean up."""
@@ -184,6 +184,7 @@ class PrismatikLight(LightEntity):
             _LOGGER.error("Prismatik went away?")
             self._disconnect()
             answer = None
+            self._retries = CONNECTION_RETRY_ERRORS
         else:
             _LOGGER.debug("RECEIVED: %s", answer)
             if answer == PrismatikAPI.AWR_NOT_LOCKED:
