@@ -28,6 +28,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 
 from .const import (
+    CONNECTION_RETRY_ERRORS,
     DEFAULT_NAME,
     DEFAULT_PORT,
     DEFAULT_PROFILE_NAME,
