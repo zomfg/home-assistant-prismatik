@@ -24,6 +24,7 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_PORT,
     CONF_PROFILE_NAME,
+    CONNECTION_RETRY_ERRORS,
 )
 from homeassistant.core import HomeAssistant
 
