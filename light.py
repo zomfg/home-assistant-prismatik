@@ -47,10 +47,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
-def setup_platform(
+async def async_setup_platform(
     hass: HomeAssistant,
     config: Dict,
-    add_entities: Callable[[List[LightEntity], bool], None],
+    async_add_entities: Callable[[List[LightEntity], bool], None],
     discovery_info: Optional[Any] = None,
 ) -> None:
     """Set up the Awesome Light platform."""
@@ -62,7 +62,7 @@ def setup_platform(
     apikey = config.get(CONF_API_KEY)
     profile = config.get(CONF_PROFILE_NAME)
 
-    add_entities([PrismatikLight(hass, name, address, profile, apikey)])
+    async_add_entities([PrismatikLight(hass, name, address, profile, apikey)])
 
 
 class PrismatikAPI(Enum):
@@ -132,6 +132,12 @@ class PrismatikLight(LightEntity):
         self._sock = None
         self._profile_name = profile
         self._retries = CONNECTION_RETRY_ERRORS
+
+        self._state_is_on = False
+        self._state_effect = None
+        self._state_effect_list = None
+        self._state_brightness = None
+        self._state_hs_color = None
 
     def __del__(self) -> None:
         """Clean up."""
@@ -231,15 +237,7 @@ class PrismatikLight(LightEntity):
     @property
     def hs_color(self) -> Optional[List]:
         """Return the hue and saturation color value [float, float]."""
-        pixels = self._get_cmd(PrismatikAPI.CMD_GET_COLOR)
-        if pixels is None:
-            return None
-        rgb = re.match(r"^\d+-(\d+),(\d+),(\d+);", pixels)
-        if rgb is None:
-            return None
-        return color_util.color_RGB_to_hs(
-            int(rgb.group(1)), int(rgb.group(2)), int(rgb.group(3))
-        )
+        return self._state_hs_color
 
     @property
     def name(self) -> str:
@@ -254,7 +252,7 @@ class PrismatikLight(LightEntity):
     @property
     def is_on(self) -> bool:
         """Return light status."""
-        return self._get_cmd(PrismatikAPI.CMD_GET_STATUS) == PrismatikAPI.STS_ON
+        return self._state_is_on
 
     @property
     def leds(self) -> int:
@@ -265,8 +263,7 @@ class PrismatikLight(LightEntity):
     @property
     def brightness(self) -> Optional[int]:
         """Return the brightness of this light between 0..255."""
-        brightness = self._get_cmd(PrismatikAPI.CMD_GET_BRIGHTNESS)
-        return round(int(brightness) * 2.55) if brightness else None
+        return self._state_brightness
 
     @property
     def supported_features(self) -> int:
@@ -276,13 +273,33 @@ class PrismatikLight(LightEntity):
     @property
     def effect_list(self) -> Optional[List]:
         """Return profile list."""
-        profiles = self._get_cmd(PrismatikAPI.CMD_GET_PROFILES)
-        return list(filter(None, profiles.split(";"))) if profiles else None
+        return self._state_effect_list
 
     @property
     def effect(self) -> Optional[str]:
         """Return current profile."""
-        return self._get_cmd(PrismatikAPI.CMD_GET_PROFILE)
+        return self._state_effect
+
+    def update(self) -> None:
+        """Update light state."""
+        self._state_is_on = self._get_cmd(PrismatikAPI.CMD_GET_STATUS) == PrismatikAPI.STS_ON
+
+        self._state_effect = self._get_cmd(PrismatikAPI.CMD_GET_PROFILE)
+
+        profiles = self._get_cmd(PrismatikAPI.CMD_GET_PROFILES)
+        self._state_effect_list = list(filter(None, profiles.split(";"))) if profiles else None
+
+        brightness = self._get_cmd(PrismatikAPI.CMD_GET_BRIGHTNESS)
+        self._state_brightness = round(int(brightness) * 2.55) if brightness else None
+
+        pixels = self._get_cmd(PrismatikAPI.CMD_GET_COLOR)
+        rgb = re.match(r"^\d+-(\d+),(\d+),(\d+);", pixels or "")
+        if rgb is None:
+            self._state_hs_color = None
+        else:
+            self._state_hs_color = color_util.color_RGB_to_hs(
+                int(rgb.group(1)), int(rgb.group(2)), int(rgb.group(3))
+            )
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn the light on."""
