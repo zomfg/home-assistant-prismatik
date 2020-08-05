@@ -139,7 +139,6 @@ class PrismatikLight(LightEntity):
         self._state_effect_list = None
         self._state_brightness = None
         self._state_hs_color = None
-        _LOGGER.debug("CONNECTIN TO: %s", "question mark")
 
     def __del__(self) -> None:
         """Clean up."""
@@ -150,11 +149,12 @@ class PrismatikLight(LightEntity):
         """Connect to Prismatik server."""
         try:
             self._tcpreader, self._tcpwriter = await asyncio.open_connection(self._address[0], self._address[1])
-        except OSError:
+        except (ConnectionRefusedError, TimeoutError):
+        # except OSError:
             if self._retries > 0:
                 self._retries -= 1
                 _LOGGER.error("Could not connect to Prismatik")
-            self._disconnect()
+            await self._disconnect()
         else:
             # check header
             data = await self._tcpreader.readline()
@@ -162,7 +162,7 @@ class PrismatikLight(LightEntity):
             _LOGGER.debug("GOT HEADER: %s", header)
             if re.match(fr"^{PrismatikAPI.AWR_HEADER}", header) is None:
                 _LOGGER.error("Bad API header")
-                self._disconnect()
+                await self._disconnect()
         return self._tcpwriter is not None
 
     async def _disconnect(self) -> None:
@@ -193,11 +193,13 @@ class PrismatikLight(LightEntity):
             data = await self._tcpreader.readline()
             answer = data.decode("ascii").strip()
         except OSError:
-            _LOGGER.error("Prismatik went away?")
-            self._disconnect()
+            if self._retries > 0:
+                self._retries -= 1
+                _LOGGER.error("Prismatik went away?")
+            await self._disconnect()
             answer = None
-            self._retries = CONNECTION_RETRY_ERRORS
         else:
+            self._retries = CONNECTION_RETRY_ERRORS
             _LOGGER.debug("RECEIVED: %s", answer)
             if answer == PrismatikAPI.AWR_NOT_LOCKED:
                 if await self._do_cmd(PrismatikAPI.CMD_LOCK):
