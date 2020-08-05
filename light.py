@@ -192,6 +192,7 @@ class PrismatikLight(LightEntity):
         try:
             self._tcpwriter.write(buffer.encode("ascii"))
             await self._tcpwriter.drain()
+            await asyncio.sleep(0.01)
             data = await self._tcpreader.readline()
             answer = data.decode("ascii").strip()
         except OSError:
