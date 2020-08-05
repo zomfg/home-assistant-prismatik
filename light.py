@@ -61,8 +61,10 @@ async def async_setup_platform(
     name = config[CONF_NAME]
     apikey = config.get(CONF_API_KEY)
     profile = config.get(CONF_PROFILE_NAME)
+    light = PrismatikLight(hass, name, address, profile, apikey)
+    await light.async_update()
 
-    async_add_entities([PrismatikLight(hass, name, address, profile, apikey)])
+    async_add_entities([light])
 
 
 class PrismatikAPI(Enum):
