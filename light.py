@@ -108,6 +108,7 @@ class PrismatikAPI(Enum):
     MOD_MOODLIGHT = "moodlight"
 
     def __str__(self) -> str:
+        # pylint: disable=invalid-str-returned
         return self.value
 
     def __eq__(self, other: str) -> bool:
@@ -150,7 +151,8 @@ class PrismatikLight(LightEntity):
     async def _connect(self) -> bool:
         """Connect to Prismatik server."""
         try:
-            self._tcpreader, self._tcpwriter = await asyncio.open_connection(self._address[0], self._address[1])
+            addr, port = self._address
+            self._tcpreader, self._tcpwriter = await asyncio.open_connection(addr, port)
         except (ConnectionRefusedError, TimeoutError):
         # except OSError:
             if self._retries > 0:
@@ -181,7 +183,7 @@ class PrismatikLight(LightEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Disconnect from update signal."""
-        self._disconnect()
+        await self._disconnect()
 
     async def _send(self, buffer: str) -> Optional[str]:
         """Send command to Prismatik server."""
@@ -292,7 +294,7 @@ class PrismatikLight(LightEntity):
 
     async def async_update(self) -> None:
         """Update light state."""
-        self._state_is_on = (await self._get_cmd(PrismatikAPI.CMD_GET_STATUS)) == PrismatikAPI.STS_ON
+        self._state_is_on = await self._get_cmd(PrismatikAPI.CMD_GET_STATUS) == PrismatikAPI.STS_ON
 
         self._state_effect = await self._get_cmd(PrismatikAPI.CMD_GET_PROFILE)
 
