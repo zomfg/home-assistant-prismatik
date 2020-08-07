@@ -1,7 +1,7 @@
 """Prismatik light."""
+import asyncio
 import logging
 import re
-import socket
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -47,10 +47,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
-def setup_platform(
+async def async_setup_platform(
     hass: HomeAssistant,
     config: Dict,
-    add_entities: Callable[[List[LightEntity], bool], None],
+    async_add_entities: Callable[[List[LightEntity], bool], None],
     discovery_info: Optional[Any] = None,
 ) -> None:
     """Set up the Awesome Light platform."""
@@ -61,8 +61,10 @@ def setup_platform(
     name = config[CONF_NAME]
     apikey = config.get(CONF_API_KEY)
     profile = config.get(CONF_PROFILE_NAME)
+    light = PrismatikLight(hass, name, address, profile, apikey)
+    await light.async_update()
 
-    add_entities([PrismatikLight(hass, name, address, profile, apikey)])
+    async_add_entities([light])
 
 
 class PrismatikAPI(Enum):
@@ -106,6 +108,7 @@ class PrismatikAPI(Enum):
     MOD_MOODLIGHT = "moodlight"
 
     def __str__(self) -> str:
+        # pylint: disable=invalid-str-returned
         return self.value
 
     def __eq__(self, other: str) -> bool:
@@ -129,91 +132,106 @@ class PrismatikLight(LightEntity):
         self._name = name
         self._address = address
         self._apikey = apikey
-        self._sock = None
+        self._tcpreader = None
+        self._tcpwriter = None
         self._profile_name = profile
         self._retries = CONNECTION_RETRY_ERRORS
+
+        self._state_is_on = False
+        self._state_effect = None
+        self._state_effect_list = None
+        self._state_brightness = None
+        self._state_hs_color = None
 
     def __del__(self) -> None:
         """Clean up."""
         self._disconnect()
         super()
 
-    def _connect(self) -> bool:
+    async def _connect(self) -> bool:
         """Connect to Prismatik server."""
         try:
-            self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._sock.settimeout(3)
-            self._sock.connect(self._address)
-        except OSError:
+            addr, port = self._address
+            self._tcpreader, self._tcpwriter = await asyncio.open_connection(addr, port)
+        except (ConnectionRefusedError, TimeoutError):
+        # except OSError:
             if self._retries > 0:
                 self._retries -= 1
                 _LOGGER.error("Could not connect to Prismatik")
-            self._disconnect()
+            await self._disconnect()
         else:
             # check header
-            header = self._sock.recv(512).decode("ascii").strip()
+            data = await self._tcpreader.readline()
+            header = data.decode("ascii").strip()
+            _LOGGER.debug("GOT HEADER: %s", header)
             if re.match(fr"^{PrismatikAPI.AWR_HEADER}", header) is None:
                 _LOGGER.error("Bad API header")
-                self._disconnect()
-        return self._sock is not None
+                await self._disconnect()
+        return self._tcpwriter is not None
 
-    def _disconnect(self) -> None:
+    async def _disconnect(self) -> None:
         """Disconnect from Prismatik server."""
         try:
-            if self._sock:
-                self._sock.shutdown(socket.SHUT_RDWR)
-                self._sock.close()
+            if self._tcpwriter:
+                self._tcpwriter.close()
+                await self._tcpwriter.wait_closed()
         except OSError:
             return
         finally:
-            self._sock = None
+            self._tcpreader = None
+            self._tcpwriter = None
 
     async def async_will_remove_from_hass(self) -> None:
         """Disconnect from update signal."""
-        self._disconnect()
+        await self._disconnect()
 
-    def _send(self, buffer: str) -> Optional[str]:
+    async def _send(self, buffer: str) -> Optional[str]:
         """Send command to Prismatik server."""
-        if self._sock is None and self._connect() is False:
+        if self._tcpwriter is None and (await self._connect()) is False:
             return None
 
         _LOGGER.debug("SENDING: %s", buffer)
         try:
-            self._sock.sendall(buffer.encode("ascii"))
-            answer = self._sock.recv(4096).decode("ascii").strip()
+            self._tcpwriter.write(buffer.encode("ascii"))
+            await self._tcpwriter.drain()
+            await asyncio.sleep(0.01)
+            data = await self._tcpreader.readline()
+            answer = data.decode("ascii").strip()
         except OSError:
-            _LOGGER.error("Prismatik went away?")
-            self._disconnect()
+            if self._retries > 0:
+                self._retries -= 1
+                _LOGGER.error("Prismatik went away?")
+            await self._disconnect()
             answer = None
-            self._retries = CONNECTION_RETRY_ERRORS
         else:
+            self._retries = CONNECTION_RETRY_ERRORS
             _LOGGER.debug("RECEIVED: %s", answer)
             if answer == PrismatikAPI.AWR_NOT_LOCKED:
-                if self._do_cmd(PrismatikAPI.CMD_LOCK):
-                    return self._send(buffer)
+                if await self._do_cmd(PrismatikAPI.CMD_LOCK):
+                    return await self._send(buffer)
                 _LOGGER.error("Could not lock Prismatik")
                 answer = None
             if answer == PrismatikAPI.AWR_AUTH_REQ:
-                if self._apikey and self._do_cmd(PrismatikAPI.CMD_APIKEY, self._apikey):
-                    return self._send(buffer)
+                if self._apikey and (await self._do_cmd(PrismatikAPI.CMD_APIKEY, self._apikey)):
+                    return await self._send(buffer)
                 _LOGGER.error("Prismatik authentication failed")
                 answer = None
         return answer
 
-    def _get_cmd(self, cmd: PrismatikAPI) -> Optional[str]:
+    async def _get_cmd(self, cmd: PrismatikAPI) -> Optional[str]:
         """Execute get-command Prismatik server."""
-        answer = self._send(f"get{cmd}\n")
+        answer = await self._send(f"get{cmd}\n")
         matches = re.compile(fr"{cmd}:(.+)").match(answer or "")
         return matches.group(1) if matches else None
 
-    def _set_cmd(self, cmd: PrismatikAPI, value: Any) -> bool:
+    async def _set_cmd(self, cmd: PrismatikAPI, value: Any) -> bool:
         """Execute set-command Prismatik server."""
-        return self._send(f"set{cmd}:{value}\n") == PrismatikAPI.AWR_OK
+        return await self._send(f"set{cmd}:{value}\n") == PrismatikAPI.AWR_OK
 
-    def _do_cmd(self, cmd: PrismatikAPI, value: Optional[Any] = None) -> bool:
+    async def _do_cmd(self, cmd: PrismatikAPI, value: Optional[Any] = None) -> bool:
         """Execute other command Prismatik server."""
         value = f":{value}" if value else ""
-        answer = self._send(f"{cmd}{value}\n")
+        answer = await self._send(f"{cmd}{value}\n")
         return (
             re.compile(
                 fr"^(PrismatikAPI.AWR_OK|{cmd}:{PrismatikAPI.AWR_SUCCESS})$"
@@ -221,25 +239,17 @@ class PrismatikLight(LightEntity):
             is not None
         )
 
-    def _set_rgb_color(self, rgb: Tuple) -> None:
+    async def _set_rgb_color(self, rgb: Tuple) -> None:
         """Generate and execude setcolor command on Prismatik server."""
-        leds = self.leds
+        leds = await self.leds
         rgb_color = ",".join(map(str, rgb))
         pixels = ";".join([f"{led}-{rgb_color}" for led in range(1, leds + 1)])
-        self._set_cmd(PrismatikAPI.CMD_SET_COLOR, pixels)
+        await self._set_cmd(PrismatikAPI.CMD_SET_COLOR, pixels)
 
     @property
     def hs_color(self) -> Optional[List]:
         """Return the hue and saturation color value [float, float]."""
-        pixels = self._get_cmd(PrismatikAPI.CMD_GET_COLOR)
-        if pixels is None:
-            return None
-        rgb = re.match(r"^\d+-(\d+),(\d+),(\d+);", pixels)
-        if rgb is None:
-            return None
-        return color_util.color_RGB_to_hs(
-            int(rgb.group(1)), int(rgb.group(2)), int(rgb.group(3))
-        )
+        return self._state_hs_color
 
     @property
     def name(self) -> str:
@@ -249,24 +259,23 @@ class PrismatikLight(LightEntity):
     @property
     def available(self) -> bool:
         """Return availability of the light."""
-        return self._sock is not None
+        return self._tcpwriter is not None
 
     @property
     def is_on(self) -> bool:
         """Return light status."""
-        return self._get_cmd(PrismatikAPI.CMD_GET_STATUS) == PrismatikAPI.STS_ON
+        return self._state_is_on
 
     @property
-    def leds(self) -> int:
+    async def leds(self) -> int:
         """Return the led count of the light."""
-        countleds = self._get_cmd(PrismatikAPI.CMD_GET_COUNTLEDS)
+        countleds = await self._get_cmd(PrismatikAPI.CMD_GET_COUNTLEDS)
         return int(countleds) if countleds else 0
 
     @property
     def brightness(self) -> Optional[int]:
         """Return the brightness of this light between 0..255."""
-        brightness = self._get_cmd(PrismatikAPI.CMD_GET_BRIGHTNESS)
-        return round(int(brightness) * 2.55) if brightness else None
+        return self._state_brightness
 
     @property
     def supported_features(self) -> int:
@@ -276,36 +285,56 @@ class PrismatikLight(LightEntity):
     @property
     def effect_list(self) -> Optional[List]:
         """Return profile list."""
-        profiles = self._get_cmd(PrismatikAPI.CMD_GET_PROFILES)
-        return list(filter(None, profiles.split(";"))) if profiles else None
+        return self._state_effect_list
 
     @property
     def effect(self) -> Optional[str]:
         """Return current profile."""
-        return self._get_cmd(PrismatikAPI.CMD_GET_PROFILE)
+        return self._state_effect
 
-    def turn_on(self, **kwargs: Any) -> None:
+    async def async_update(self) -> None:
+        """Update light state."""
+        self._state_is_on = await self._get_cmd(PrismatikAPI.CMD_GET_STATUS) == PrismatikAPI.STS_ON
+
+        self._state_effect = await self._get_cmd(PrismatikAPI.CMD_GET_PROFILE)
+
+        profiles = await self._get_cmd(PrismatikAPI.CMD_GET_PROFILES)
+        self._state_effect_list = list(filter(None, profiles.split(";"))) if profiles else None
+
+        brightness = await self._get_cmd(PrismatikAPI.CMD_GET_BRIGHTNESS)
+        self._state_brightness = round(int(brightness) * 2.55) if brightness else None
+
+        pixels = await self._get_cmd(PrismatikAPI.CMD_GET_COLOR)
+        rgb = re.match(r"^\d+-(\d+),(\d+),(\d+);", pixels or "")
+        if rgb is None:
+            self._state_hs_color = None
+        else:
+            self._state_hs_color = color_util.color_RGB_to_hs(
+                int(rgb.group(1)), int(rgb.group(2)), int(rgb.group(3))
+            )
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the light on."""
-        self._set_cmd(PrismatikAPI.CMD_SET_STATUS, PrismatikAPI.STS_ON)
+        await self._set_cmd(PrismatikAPI.CMD_SET_STATUS, PrismatikAPI.STS_ON)
         if ATTR_EFFECT in kwargs:
-            self._set_cmd(PrismatikAPI.CMD_SET_PERSIST_ON_UNLOCK, PrismatikAPI.STS_OFF)
-            self._set_cmd(PrismatikAPI.CMD_SET_PROFILE, kwargs[ATTR_EFFECT])
+            await self._set_cmd(PrismatikAPI.CMD_SET_PERSIST_ON_UNLOCK, PrismatikAPI.STS_OFF)
+            await self._set_cmd(PrismatikAPI.CMD_SET_PROFILE, kwargs[ATTR_EFFECT])
         elif ATTR_BRIGHTNESS in kwargs:
-            self._set_cmd(
+            await self._set_cmd(
                 PrismatikAPI.CMD_SET_BRIGHTNESS, round(kwargs[ATTR_BRIGHTNESS] / 2.55)
             )
             on_unlock = PrismatikAPI.STS_OFF
-            if self._get_cmd(PrismatikAPI.CMD_GET_PROFILE) == self._profile_name:
+            if (await self._get_cmd(PrismatikAPI.CMD_GET_PROFILE)) == self._profile_name:
                 on_unlock = PrismatikAPI.STS_ON
-            self._set_cmd(PrismatikAPI.CMD_SET_PERSIST_ON_UNLOCK, on_unlock)
+            await self._set_cmd(PrismatikAPI.CMD_SET_PERSIST_ON_UNLOCK, on_unlock)
         elif ATTR_HS_COLOR in kwargs:
             rgb = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
-            self._do_cmd(PrismatikAPI.CMD_NEW_PROFILE, self._profile_name)
-            self._set_cmd(PrismatikAPI.CMD_SET_PERSIST_ON_UNLOCK, PrismatikAPI.STS_ON)
-            self._set_rgb_color(rgb)
-        self._do_cmd(PrismatikAPI.CMD_UNLOCK)
+            await self._do_cmd(PrismatikAPI.CMD_NEW_PROFILE, self._profile_name)
+            await self._set_cmd(PrismatikAPI.CMD_SET_PERSIST_ON_UNLOCK, PrismatikAPI.STS_ON)
+            await self._set_rgb_color(rgb)
+        await self._do_cmd(PrismatikAPI.CMD_UNLOCK)
 
-    def turn_off(self, **kwargs: Any) -> None:
+    async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the light off."""
         # pylint: disable=unused-argument
-        self._set_cmd(PrismatikAPI.CMD_SET_STATUS, PrismatikAPI.STS_OFF)
+        await self._set_cmd(PrismatikAPI.CMD_SET_STATUS, PrismatikAPI.STS_OFF)
