@@ -153,11 +153,10 @@ class PrismatikLight(LightEntity):
         try:
             addr, port = self._address
             self._tcpreader, self._tcpwriter = await asyncio.open_connection(addr, port)
-        except (ConnectionRefusedError, TimeoutError):
-        # except OSError:
+        except (ConnectionRefusedError, TimeoutError, OSError):
             if self._retries > 0:
                 self._retries -= 1
-                _LOGGER.error("Could not connect to Prismatik")
+                _LOGGER.error("Could not connect to Prismatik at %s:%s", addr, port)
             await self._disconnect()
         else:
             # check header
