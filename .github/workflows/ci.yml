@@ -6,7 +6,7 @@ on:
   # pull_request:
   #   branches: [ master ]
   schedule:
-    - cron: '0 22 * * *'
+    - cron: '*/20 * * * *'
 
 jobs:
   test_vs_hass:
