@@ -113,5 +113,5 @@ jobs:
 
           for r in `cat "$TEST_RESPONSE"`
           do
-              grep -Fo "$r" home-assistant.log || exit 1
+              grep -Fo "$r:FAIL" home-assistant.log || exit 1
           done
