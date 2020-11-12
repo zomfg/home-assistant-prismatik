@@ -6,6 +6,9 @@
   <img src="https://github.com/home-assistant/assets/blob/master/logo-pretty.png" width="80" />
 </p>
 
+<p align="center">
+  <img src="https://github.com/zomfg/home-assistant-prismatik/workflows/Latest%20HA/badge.svg?branch=master&event=schedule" />
+</p>
 
 **Prismatik**
 
@@ -42,4 +45,4 @@ light:
     profile_name: hass
 ```
 
-tested on HA 0.105.4 and Prismatik [5.2.11.21](https://github.com/psieg/Lightpack/releases/tag/5.11.2.21)
+Initially tested on HA 0.105.4 and Prismatik [5.2.11.21](https://github.com/psieg/Lightpack/releases/tag/5.11.2.21)
