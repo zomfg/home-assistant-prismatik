@@ -1,12 +1,12 @@
 name: Latest HA
 
 on:
-  push:
-    branches: [ 'feature/ci' ]
+  # push:
+  #   branches: [ 'feature/ci' ]
   # pull_request:
   #   branches: [ master ]
   schedule:
-    - cron: '*/20 * * * *'
+    - cron: '0 0 * * *'
 
 jobs:
   test_vs_hass:
