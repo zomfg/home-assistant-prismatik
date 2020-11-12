@@ -11,15 +11,15 @@ jobs:
     runs-on: ubuntu-20.04
     name: Test vs last Home Assistant
     env:
-      HASS_IMAGE: 'homeassistant/home-assistant'
-      TEST_RESPONSE: '{{ runner.temp }}/response.log'
+      HASS_IMAGE: homeassistant/home-assistant
+      TEST_RESPONSE: ${{ runner.temp }}/response.log
     steps:
       - name: Check for new HA versions
         env:
           INTERVAL: 36
           DHUB_URL: 'https://hub.docker.com/v2/repositories/{{ env.HASS_IMAGE }}/tags/?page_size=5&page=1&name=0.&ordering=last_updated'
-          DHUB_RES: '{{ runner.temp }}/dhub_res.json'
-          HA_TAG_FILE: '{{ runner.temp }}/tag'
+          DHUB_RES: ${{ runner.temp }}/dhub_res.json
+          HA_TAG_FILE: ${{ runner.temp }}/tag
         run: |
           set -xe
           curl "$DHUB_URL" > "$DHUB_RES"
@@ -48,19 +48,19 @@ jobs:
           echo "HASS_NEW=$(cat $HA_TAG_FILE | cut -d' ' -f 2)" >> GITHUB_ENV
 
       - name: Checkout Source
-        if: {{ env.HASS_NEW == "1" }}
+        if: ${{ env.HASS_NEW == "1" }}
         uses: actions/checkout@v2
         with:
           path: 'config/custom_components/prismatik'
 
       - name: Pull HA
-        if: {{ env.HASS_NEW == "1" }}
+        if: ${{ env.HASS_NEW == "1" }}
         run: |
           set -xe
           docker pull "$HASS_IMAGE:$HASS_TAG"
 
       - name: Generate HA config yaml
-        if: {{ env.HASS_NEW == "1" }}
+        if: ${{ env.HASS_NEW == "1" }}
         working-directory: config
         run: |
           set -xe
@@ -78,14 +78,14 @@ jobs:
           EOF
 
       - name: Launch Prismatik dummy server
-        if: {{ env.HASS_NEW == "1" }}
-        working-directory: 'config/custom_components/prismatik'
+        if: ${{ env.HASS_NEW == "1" }}
+        working-directory: config/custom_components/prismatik
         run: |
           set -xe
           ./test_server.py > "$TEST_RESPONSE" &
 
       - name: Run HA for 15 seconds
-        if: {{ env.HASS_NEW == "1" }}
+        if: ${{ env.HASS_NEW == "1" }}
         env:
           HASS_CONTAINER: tmphass
         run: |
@@ -102,7 +102,7 @@ jobs:
           docker stop "$HASS_CONTAINER"
 
       - name: Check HA Log / Server responses
-        if: {{ env.HASS_NEW == "1" }}
+        if: ${{ env.HASS_NEW == "1" }}
         working-directory: config
         run: |
           set -xe
