@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://github.com/zomfg/home-assistant-prismatik/workflows/CI%20Build/badge.svg?branch=feature/ci&event=schedule" />
+  <img src="https://github.com/zomfg/home-assistant-prismatik/workflows/Latest%20HA/badge.svg?branch=feature/ci&event=schedule" />
 </p>
 
 **Prismatik**
