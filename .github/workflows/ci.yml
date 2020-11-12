@@ -50,7 +50,7 @@ jobs:
           echo "HASS_NEW=$(cat $HA_TAG_FILE | cut -d' ' -f 2)" >> GITHUB_ENV
 
       - name: Checkout Source
-        if: ${{ env.HASS_NEW == '1' }}
+        if: ${{ env.HASS_NEW == 1 }}
         uses: actions/checkout@v2
         with:
           path: 'config/custom_components/prismatik'
