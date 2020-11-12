@@ -50,19 +50,19 @@ jobs:
           echo "HASS_NEW=$(cat $HA_TAG_FILE | cut -d' ' -f 2)" >> GITHUB_ENV
 
       - name: Checkout Source
-        if: ${{ env.HASS_NEW == "1" }}
+        if: env.HASS_NEW == '1'
         uses: actions/checkout@v2
         with:
           path: 'config/custom_components/prismatik'
 
       - name: Pull HA
-        if: ${{ env.HASS_NEW == "1" }}
+        if: env.HASS_NEW == '1'
         run: |
           set -xe
           docker pull "$HASS_IMAGE:$HASS_TAG"
 
       - name: Generate HA config yaml
-        if: ${{ env.HASS_NEW == "1" }}
+        if: env.HASS_NEW == '1'
         working-directory: config
         run: |
           set -xe
@@ -80,14 +80,14 @@ jobs:
           EOF
 
       - name: Launch Prismatik dummy server
-        if: ${{ env.HASS_NEW == "1" }}
+        if: env.HASS_NEW == '1'
         working-directory: config/custom_components/prismatik
         run: |
           set -xe
           ./test_server.py > "$TEST_RESPONSE" &
 
       - name: Run HA for 15 seconds
-        if: ${{ env.HASS_NEW == "1" }}
+        if: env.HASS_NEW == '1'
         env:
           HASS_CONTAINER: tmphass
         run: |
@@ -104,7 +104,7 @@ jobs:
           docker stop "$HASS_CONTAINER"
 
       - name: Check HA Log / Server responses
-        if: ${{ env.HASS_NEW == "1" }}
+        if: env.HASS_NEW == '1'
         working-directory: config
         run: |
           set -xe
