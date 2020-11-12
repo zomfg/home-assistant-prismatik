@@ -20,7 +20,7 @@ jobs:
         env:
           INTERVAL: 36
           DHUB_URL: 'https://hub.docker.com/v2/repositories/${{ env.HASS_IMAGE }}/tags/?page_size=5&page=1&name=0.&ordering=last_updated'
-          DHUB_RES: "$GITHUB_WORKSPACE/dhub_res.json"
+          DHUB_RES: $GITHUB_WORKSPACE/dhub_res.json
           HA_TAG_FILE: "$GITHUB_WORKSPACE/tag"
         run: |
           set -xe
