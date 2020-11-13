@@ -6,7 +6,7 @@ on:
   # pull_request:
   #   branches: [ master ]
   schedule:
-    - cron: '40 0 * * *'
+    - cron: '0 0 * * *'
 
 jobs:
   test_vs_hass:
@@ -48,6 +48,26 @@ jobs:
 
           echo "HASS_TAG=$(cat $HA_TAG_FILE | cut -d' ' -f 1)" >> $GITHUB_ENV
           echo "HASS_NEW=$(cat $HA_TAG_FILE | cut -d' ' -f 2)" >> $GITHUB_ENV
+
+      - name: Check previous run if no new HA
+        if: ${{ env.HASS_NEW == '0' }}
+        env:
+          RUNS_OUT: previous_runs_list.json
+        run: |
+          RUNS_URL=$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/main.yml/runs?event=schedule
+
+          set -xe
+          curl -H "User-Agent: $GITHUB_REPOSITORY" "$RUNS_URL" > "$RUNS_OUT"
+
+          cat << EOF | python --
+          import json
+
+          with open('$RUNS_OUT') as f:
+            data = json.load(f)
+
+          if data['workflow_runs'][0]['conclusion'] != 'success':
+            exit(1)
+          EOF
 
       - name: Checkout Source
         if: ${{ env.HASS_NEW == '1' }}
