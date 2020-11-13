@@ -59,30 +59,35 @@ jobs:
           set -xe
           curl -H "User-Agent: $GITHUB_REPOSITORY" "$RUNS_URL" > "$RUNS_OUT"
 
-          cat << EOF | python --
+          cat << EOF | python -- >> $GITHUB_ENV
           import json
 
           with open('$RUNS_OUT') as f:
             data = json.load(f)
+
+          force = data.get('total_count', 0) == 0
+          print(f"FORCE_RUN={int(force)}")
+          if force:
+            exit(0)
 
           if data['workflow_runs'][0]['conclusion'] != 'success':
             exit(1)
           EOF
 
       - name: Checkout Source
-        if: ${{ env.HASS_NEW == '1' }}
+        if: ${{ env.HASS_NEW == '1' || env.FORCE_RUN == '1' }}
         uses: actions/checkout@v2
         with:
           path: 'config/custom_components/prismatik'
 
       - name: Pull HA
-        if: ${{ env.HASS_NEW == '1' }}
+        if: ${{ env.HASS_NEW == '1' || env.FORCE_RUN == '1' }}
         run: |
           set -xe
           docker pull "$HASS_IMAGE:$HASS_TAG"
 
       - name: Generate HA config yaml
-        if: ${{ env.HASS_NEW == '1' }}
+        if: ${{ env.HASS_NEW == '1' || env.FORCE_RUN == '1' }}
         working-directory: config
         run: |
           set -xe
@@ -100,14 +105,14 @@ jobs:
           EOF
 
       - name: Launch Prismatik dummy server
-        if: ${{ env.HASS_NEW == '1' }}
+        if: ${{ env.HASS_NEW == '1' || env.FORCE_RUN == '1' }}
         working-directory: config/custom_components/prismatik
         run: |
           set -xe
           ./test_server.py > "$TEST_RESPONSE" &
 
       - name: Run HA for 15 seconds
-        if: ${{ env.HASS_NEW == '1' }}
+        if: ${{ env.HASS_NEW == '1' || env.FORCE_RUN == '1' }}
         env:
           HASS_CONTAINER: tmphass
         run: |
@@ -124,7 +129,7 @@ jobs:
           docker stop "$HASS_CONTAINER"
 
       - name: Check HA Log / Server responses
-        if: ${{ env.HASS_NEW == '1' }}
+        if: ${{ env.HASS_NEW == '1' || env.FORCE_RUN == '1' }}
         working-directory: config
         run: |
           set -xe
