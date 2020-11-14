@@ -6,7 +6,7 @@ on:
   # pull_request:
   #   branches: [ master ]
   schedule:
-    - cron: '0 5 * * *'
+    - cron: '0 10 * * *'
 
 jobs:
   test_vs_hass:
@@ -19,7 +19,7 @@ jobs:
       - name: Check for new HA versions
         env:
           INTERVAL: 24
-          DHUB_URL: 'https://hub.docker.com/v2/repositories/${{ env.HASS_IMAGE }}/tags/?page_size=5&page=1&name=0.&ordering=last_updated'
+          DHUB_URL: 'https://hub.docker.com/v2/repositories/${{ env.HASS_IMAGE }}/tags/?page_size=15&page=1&name=0.&ordering=last_updated'
           DHUB_RES: ${{ github.workspace }}/dhub_res.json
           HA_TAG_FILE: ${{ github.workspace }}/tag
         run: |
