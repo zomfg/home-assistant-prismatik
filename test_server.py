@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-
 import socket
+import sys
 
 localIP     = "127.0.0.1"
 localPort   = 3636
@@ -40,6 +40,14 @@ def getprofile():
 def getprofiles():
     return f"profiles:{';'.join(profiles)};\n"
 
+# print all test responses
+print(welcome(), end='')
+print(getstatus(), end='')
+print(getprofile(), end='')
+print(getprofiles(), end='')
+print(getbrightness(), end='')
+print(getcolors(), end='')
+
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind((localIP, localPort))
 s.listen(4)
@@ -50,7 +58,7 @@ try:
         data, addr = client.recvfrom(128*1024)
         req = data.decode('ascii').strip()
         resp = globals()[req]()
-        print(resp.strip())
+        # print(resp.strip())
         client.sendall(resp.encode('ascii'))
 except:
     pass
