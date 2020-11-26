@@ -8,7 +8,7 @@
 
 <p align="center">
   <img src="https://github.com/zomfg/home-assistant-prismatik/workflows/Latest%20HA/badge.svg?branch=master&event=schedule" />
-  <img src="https://img.shields.io/badge/HACS-Custom-orange.svg" />
+  <a href="https://github.com/custom-components/hacs"><img src="https://img.shields.io/badge/HACS-Custom-orange.svg" /></a>
 </p>
 
 **Prismatik**
@@ -26,6 +26,8 @@ git clone --branch master --depth 1 https://github.com/zomfg/home-assistant-pris
 git clone --branch ha-0.110 --depth 1 https://github.com/zomfg/home-assistant-prismatik.git prismatik
 ```
 or manually download to `/hass/config/custom_components` and rename `home-assistant-prismatik` to `prismatik`
+
+or add the repo to HACS and install from there
 
 **HA config**
 ```yaml
