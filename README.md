@@ -8,6 +8,7 @@
 
 <p align="center">
   <img src="https://github.com/zomfg/home-assistant-prismatik/workflows/Latest%20HA/badge.svg?branch=master&event=schedule" />
+  <img src="https://img.shields.io/badge/HACS-Custom-orange.svg" />
 </p>
 
 **Prismatik**

@@ -1,0 +1,7 @@
+{
+	"name": "Prismatik",
+	"domains": ["light", "prismatik"],
+	"render_readme": true,
+	"iot_class": "Local Polling",
+	"content_in_root": true
+}
