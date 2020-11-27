@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="https://github.com/zomfg/Lightpack/blob/master/Software/res/icons/Prismatik.png" width="80" />
+  <img src="https://raw.githubusercontent.com/zomfg/Lightpack/749b592dd033cc96240a75f16d85f170640fab50/Software/res/icons/Prismatik.png" width="80" />
   &nbsp;
   &nbsp;
   &nbsp;
-  <img src="https://github.com/home-assistant/assets/blob/master/logo/logo-pretty.png" width="80" />
+  <img src="https://raw.githubusercontent.com/home-assistant/assets/1e19f0dca208f0876b274c68345fcf989de7377a/logo/logo-pretty.svg" width="80" />
 </p>
 
 <p align="center">
