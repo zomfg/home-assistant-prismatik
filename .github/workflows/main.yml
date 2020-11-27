@@ -138,3 +138,14 @@ jobs:
           do
               grep -Fo "$r" home-assistant.log || exit 1
           done
+
+      - name: Check Logos
+        if: ${{ always() }}
+        working-directory: config/custom_components/prismatik
+        run: |
+          set -xe
+
+          for logo in `grep -Eo "https://raw[^\"]+" README.md`
+          do
+            curl -f "$logo" > /dev/null
+          done
