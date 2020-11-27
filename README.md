@@ -3,7 +3,7 @@
   &nbsp;
   &nbsp;
   &nbsp;
-  <img src="https://github.com/home-assistant/assets/blob/master/logo-pretty.png" width="80" />
+  <img src="https://github.com/home-assistant/assets/blob/master/logo/logo-pretty.png" width="80" />
 </p>
 
 <p align="center">
