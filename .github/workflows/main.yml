@@ -73,7 +73,7 @@ jobs:
           EOF
 
       - name: Checkout Source
-        if: ${{ env.FORCE_RUN == '1' }}
+        if: ${{ always() }}
         uses: actions/checkout@v2
         with:
           path: 'config/custom_components/prismatik'
