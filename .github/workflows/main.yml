@@ -19,8 +19,8 @@ jobs:
     steps:
       - name: Check for new HA versions
         env:
-          INTERVAL: 24
-          DHUB_URL: 'https://hub.docker.com/v2/repositories/${{ env.HASS_IMAGE }}/tags/?page_size=15&page=1&name=stable&ordering=last_updated'
+          HOURS_INTERVAL: 25
+          DHUB_URL: 'https://hub.docker.com/v2/repositories/${{ env.HASS_IMAGE }}/tags/?page_size=5&page=1&name=${{ env.HASS_TAG }}&ordering=last_updated'
           DHUB_RES: ${{ github.workspace }}/dhub_res.json
         run: |
           set -xe
@@ -35,13 +35,11 @@ jobs:
           with open('$DHUB_RES') as f:
             data = json.load(f)
 
-          re_version = re.compile(r"^0\.[0-9]+(\.[0-9]+)?$")
-          prev_date = dt.datetime.today() - dt.timedelta(hours = $INTERVAL)
+          prev_date = dt.datetime.today() - dt.timedelta(hours = $HOURS_INTERVAL)
 
           for tag in data['results']:
-            if re_version.match(tag['name']) is not None:
+            if tag['name'] == "$HASS_TAG":
               is_new = dt.datetime.strptime(tag['last_updated'], '%Y-%m-%dT%H:%M:%S.%fZ') > prev_date
-              print(f"HASS_TAG={tag['name']}")
               print(f"FORCE_RUN={int(is_new)}")
               break
 
