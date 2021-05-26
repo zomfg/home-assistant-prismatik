@@ -161,7 +161,7 @@ class PrismatikLight(LightEntity):
         else:
             # check header
             data = await self._tcpreader.readline()
-            header = data.decode("ascii").strip()
+            header = data.decode().strip()
             _LOGGER.debug("GOT HEADER: %s", header)
             if re.match(fr"^{PrismatikAPI.AWR_HEADER}", header) is None:
                 _LOGGER.error("Bad API header")
@@ -191,11 +191,11 @@ class PrismatikLight(LightEntity):
 
         _LOGGER.debug("SENDING: %s", buffer)
         try:
-            self._tcpwriter.write(buffer.encode("ascii"))
+            self._tcpwriter.write(buffer.encode())
             await self._tcpwriter.drain()
             await asyncio.sleep(0.01)
             data = await self._tcpreader.readline()
-            answer = data.decode("ascii").strip()
+            answer = data.decode().strip()
         except OSError:
             if self._retries > 0:
                 self._retries -= 1

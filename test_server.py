@@ -28,7 +28,7 @@ brightness = 100
 def getbrightness():
     return f"brightness:{brightness}\n"
 
-profiles = ['Lightpack']
+profiles = ['Lightpack','Призматик','Regnbåge']
 profile_idx = 0
 # getprofile
 # profile:hassio
@@ -52,14 +52,14 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind((localIP, localPort))
 s.listen(4)
 client, addr = s.accept()
-client.sendall(welcome().encode('ascii'))
+client.sendall(welcome().encode())
 try:
     while True:
         data, addr = client.recvfrom(128*1024)
-        req = data.decode('ascii').strip()
+        req = data.decode().strip()
         resp = globals()[req]()
         # print(resp.strip())
-        client.sendall(resp.encode('ascii'))
+        client.sendall(resp.encode())
 except:
     pass
 finally:
