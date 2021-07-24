@@ -29,6 +29,8 @@ from homeassistant.core import HomeAssistant
 
 from .const import (
     CONNECTION_RETRY_ERRORS,
+    DEFAULT_ICON_OFF,
+    DEFAULT_ICON_ON,
     DEFAULT_NAME,
     DEFAULT_PORT,
     DEFAULT_PROFILE_NAME,
@@ -264,6 +266,11 @@ class PrismatikLight(LightEntity):
     def is_on(self) -> bool:
         """Return light status."""
         return self._state_is_on
+
+    @property
+    def icon(self) -> str:
+        """Light icon."""
+        return DEFAULT_ICON_ON if self.available else DEFAULT_ICON_OFF
 
     @property
     async def leds(self) -> int:
