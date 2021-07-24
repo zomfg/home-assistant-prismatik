@@ -139,6 +139,10 @@ class PrismatikLight(LightEntity):
         self._profile_name = profile
         self._retries = CONNECTION_RETRY_ERRORS
 
+        host = self._address[0].replace(".", "_")
+        port = self._address[1]
+        self._unique_id = f"{host}_{port}"
+
         self._state_is_on = False
         self._state_effect = None
         self._state_effect_list = None
@@ -271,6 +275,11 @@ class PrismatikLight(LightEntity):
     def icon(self) -> str:
         """Light icon."""
         return DEFAULT_ICON_ON if self.available else DEFAULT_ICON_OFF
+
+    @property
+    def unique_id(self) -> str:
+        """Unique ID."""
+        return self._unique_id
 
     @property
     async def leds(self) -> int:
