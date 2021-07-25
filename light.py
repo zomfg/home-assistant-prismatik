@@ -7,6 +7,7 @@ import voluptuous as vol
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_EFFECT,
+    ATTR_EFFECT_LIST,
     ATTR_HS_COLOR,
     PLATFORM_SCHEMA,
     SUPPORT_BRIGHTNESS,
@@ -15,6 +16,7 @@ from homeassistant.components.light import (
     LightEntity,
 )
 from homeassistant.const import (
+    ATTR_STATE,
     CONF_API_KEY,
     CONF_HOST,
     CONF_NAME,
@@ -84,11 +86,11 @@ class PrismatikLight(LightEntity):
         self._unique_id = f"{host}_{self._client.port}"
 
         self._state = {
-            'is_on' : False,
-            'effect' : None,
-            'effect_list' : None,
-            'brightness' : None,
-            'hs_color' : None,
+            ATTR_STATE : False,
+            ATTR_EFFECT : None,
+            ATTR_EFFECT_LIST : None,
+            ATTR_BRIGHTNESS : None,
+            ATTR_HS_COLOR : None,
         }
 
     async def async_will_remove_from_hass(self) -> None:
@@ -98,7 +100,7 @@ class PrismatikLight(LightEntity):
     @property
     def hs_color(self) -> Optional[List]:
         """Return the hue and saturation color value [float, float]."""
-        return self._state['hs_color']
+        return self._state[ATTR_HS_COLOR]
 
     @property
     def name(self) -> str:
@@ -113,7 +115,7 @@ class PrismatikLight(LightEntity):
     @property
     def is_on(self) -> bool:
         """Return light status."""
-        return self._state['is_on']
+        return self._state[ATTR_STATE]
 
     @property
     def icon(self) -> str:
@@ -128,7 +130,7 @@ class PrismatikLight(LightEntity):
     @property
     def brightness(self) -> Optional[int]:
         """Return the brightness of this light between 0..255."""
-        return self._state['brightness']
+        return self._state[ATTR_BRIGHTNESS]
 
     @property
     def supported_features(self) -> int:
@@ -138,25 +140,25 @@ class PrismatikLight(LightEntity):
     @property
     def effect_list(self) -> Optional[List]:
         """Return profile list."""
-        return self._state['effect_list']
+        return self._state[ATTR_EFFECT_LIST]
 
     @property
     def effect(self) -> Optional[str]:
         """Return current profile."""
-        return self._state['effect']
+        return self._state[ATTR_EFFECT]
 
     async def async_update(self) -> None:
         """Update light state."""
-        self._state['is_on'] = await self._client.is_on()
+        self._state[ATTR_STATE] = await self._client.is_on()
 
-        self._state['effect'] = await self._client.get_profile()
-        self._state['effect_list'] = await self._client.get_profiles()
+        self._state[ATTR_EFFECT] = await self._client.get_profile()
+        self._state[ATTR_EFFECT_LIST] = await self._client.get_profiles()
 
         brightness = await self._client.get_brightness()
-        self._state['brightness'] = round(brightness * 2.55) if brightness else None
+        self._state[ATTR_BRIGHTNESS] = round(brightness * 2.55) if brightness else None
 
         rgb = await self._client.get_color()
-        self._state['hs_color'] = color_util.color_RGB_to_hs(*rgb) if rgb else None
+        self._state[ATTR_HS_COLOR] = color_util.color_RGB_to_hs(*rgb) if rgb else None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the light on."""
