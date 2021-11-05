@@ -1,5 +1,5 @@
 """Prismatik light."""
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Set
 
 import homeassistant.helpers.config_validation as cv
 import homeassistant.util.color as color_util
@@ -9,6 +9,7 @@ from homeassistant.components.light import (
     ATTR_EFFECT,
     ATTR_EFFECT_LIST,
     ATTR_HS_COLOR,
+    COLOR_MODE_HS,
     PLATFORM_SCHEMA,
     SUPPORT_BRIGHTNESS,
     SUPPORT_COLOR,
@@ -136,6 +137,16 @@ class PrismatikLight(LightEntity):
     def supported_features(self) -> int:
         """Flag supported features."""
         return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_EFFECT
+
+    @property
+    def color_mode(self) -> Optional[str]:
+        """Color mode."""
+        return COLOR_MODE_HS
+
+    @property
+    def supported_color_modes(self) -> Optional[Set]:
+        """Supported color modes."""
+        return {COLOR_MODE_HS}
 
     @property
     def effect_list(self) -> Optional[List]:
