@@ -16,6 +16,7 @@ from homeassistant.components.light import (
     SUPPORT_EFFECT,
     LightEntity,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_STATE,
     CONF_API_KEY,
@@ -32,6 +33,7 @@ from .const import (
     DEFAULT_NAME,
     DEFAULT_PORT,
     DEFAULT_PROFILE_NAME,
+    DOMAIN
 )
 
 from .prismatik import PrismatikClient
@@ -52,15 +54,33 @@ async def async_setup_platform(
     async_add_entities: Callable[[List[LightEntity], bool], None],
     discovery_info: Optional[Any] = None,
 ) -> None:
-    """Set up the Awesome Light platform."""
+    """Set up the Prismatik Light platform."""
     # pylint: disable=unused-argument
-    # Assign configuration variables.
-    # The configuration check takes care they are present.
+
     client = PrismatikClient(
             config[CONF_HOST],
             config[CONF_PORT],
             config.get(CONF_API_KEY)
         )
+    light = PrismatikLight(hass, config[CONF_NAME], client, config.get(CONF_PROFILE_NAME))
+    await light.async_update()
+
+    async_add_entities([light])
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: Callable[[List[LightEntity], bool], None],
+) -> None:
+    """Set up the Prismatik Light from integration."""
+    config = hass.data[DOMAIN][config_entry.entry_id]
+    if config_entry.options:
+        config.update(config_entry.options)
+    client = PrismatikClient(
+        config[CONF_HOST],
+        config[CONF_PORT],
+        config.get(CONF_API_KEY)
+    )
     light = PrismatikLight(hass, config[CONF_NAME], client, config.get(CONF_PROFILE_NAME))
     await light.async_update()
 

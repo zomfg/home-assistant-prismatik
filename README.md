@@ -30,6 +30,8 @@ or manually download to `/hass/config/custom_components` and rename `home-assist
 or add the repo to HACS and install from there
 
 **HA config**
+you can configure the integration through UI
+or with YAML
 ```yaml
 light:
   - platform: prismatik

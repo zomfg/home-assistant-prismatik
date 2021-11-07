@@ -2,7 +2,7 @@
   "domain": "prismatik",
   "name": "Prismatik",
   "version": "2021.3.0.1",
-  "config_flow": false,
+  "config_flow": true,
   "documentation": "https://github.com/zomfg/home-assistant-prismatik",
   "codeowners": [
     "@zomfg"

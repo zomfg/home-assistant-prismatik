@@ -1,0 +1,53 @@
+{
+    "title": "Prismatik",
+    "config": {
+        "flow_title": "Prismatik Configuration",
+        "step": {
+            "user": {
+                "title": "Prismatik",
+                "description": "Configure the connection details.",
+                "data": {
+                    "host": "Host",
+                    "port": "Port",
+                    "api_key": "API Key",
+                    "name": "Name",
+                    "profile_name": "Profile name"
+                }
+            }
+        },
+        "abort": {
+            "already_configured": "Service is already configured",
+            "conn_error": "Unable to connect."
+        },
+        "error": {
+            "cannot_connect": "Unable to connect",
+            "invalid_api_key": "Invalid API Key",
+            "unknown": "Unknown Error"
+        }
+    },
+    "options": {
+        "flow_title": "Prismatik Configuration",
+        "step": {
+            "user": {
+                "title": "Prismatik",
+                "description": "Configure the connection details.",
+                "data": {
+                    "host": "Host",
+                    "port": "Port",
+                    "api_key": "API Key",
+                    "name": "Name",
+                    "profile_name": "Profile name"
+                }
+            }
+        },
+        "abort": {
+            "already_configured": "Service is already configured",
+            "conn_error": "Unable to connect."
+        },
+        "error": {
+            "cannot_connect": "Unable to connect",
+            "invalid_api_key": "Invalid API Key",
+            "unknown": "Unknown Error"
+        }
+    }
+}
