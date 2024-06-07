@@ -10,11 +10,10 @@ from homeassistant.components.light import (
     ATTR_EFFECT_LIST,
     ATTR_HS_COLOR,
     COLOR_MODE_HS,
-    PLATFORM_SCHEMA,
-    SUPPORT_BRIGHTNESS,
-    SUPPORT_COLOR,
-    SUPPORT_EFFECT,
+    ColorMode,
     LightEntity,
+    LightEntityFeature,
+    PLATFORM_SCHEMA,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -106,6 +105,10 @@ class PrismatikLight(LightEntity):
         host = self._client.host.replace(".", "_")
         self._unique_id = f"{host}_{self._client.port}"
 
+        self._attr_color_mode = ColorMode.HS
+        self._attr_supported_color_modes = set({ColorMode.HS, ColorMode.BRIGHTNESS})
+        self._supported_features = LightEntityFeature.EFFECT
+
         self._state = {
             ATTR_STATE : False,
             ATTR_EFFECT : None,
@@ -152,21 +155,6 @@ class PrismatikLight(LightEntity):
     def brightness(self) -> Optional[int]:
         """Return the brightness of this light between 0..255."""
         return self._state[ATTR_BRIGHTNESS]
-
-    @property
-    def supported_features(self) -> int:
-        """Flag supported features."""
-        return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_EFFECT
-
-    @property
-    def color_mode(self) -> Optional[str]:
-        """Color mode."""
-        return COLOR_MODE_HS
-
-    @property
-    def supported_color_modes(self) -> Optional[Set]:
-        """Supported color modes."""
-        return {COLOR_MODE_HS}
 
     @property
     def effect_list(self) -> Optional[List]:
