@@ -107,7 +107,7 @@ class PrismatikLight(LightEntity):
 
         self._attr_color_mode = ColorMode.HS
         self._attr_supported_color_modes = set({ColorMode.HS, ColorMode.BRIGHTNESS})
-        self._supported_features = LightEntityFeature.EFFECT
+        self._attr_supported_features = LightEntityFeature.EFFECT
 
         self._state = {
             ATTR_STATE : False,
