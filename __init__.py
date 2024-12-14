@@ -4,7 +4,10 @@ https://github.com/psieg/Lightpack
 """
 import asyncio
 from homeassistant.config_entries import SOURCE_IMPORT
+from homeassistant.const import Platform
 from .const import DOMAIN
+
+PLATFORMS = [Platform.LIGHT]
 
 async def async_setup(hass, config):
     """Set up the Prismatik integration."""
@@ -32,8 +35,6 @@ async def async_setup_entry(hass, entry):
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = config
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, "light")
-    )
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True

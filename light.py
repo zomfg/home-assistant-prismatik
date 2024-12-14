@@ -106,7 +106,7 @@ class PrismatikLight(LightEntity):
         self._unique_id = f"{host}_{self._client.port}"
 
         self._attr_color_mode = ColorMode.HS
-        self._attr_supported_color_modes = set({ColorMode.HS, ColorMode.BRIGHTNESS})
+        self._attr_supported_color_modes = set({ColorMode.HS})
         self._attr_supported_features = LightEntityFeature.EFFECT
 
         self._state = {
